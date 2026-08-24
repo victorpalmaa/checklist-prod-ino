@@ -1,0 +1,20 @@
+# Dependências
+node_modules
+.pnpm-store
+
+# Build
+dist
+*.tsbuildinfo
+
+# Ambiente — nunca versionar. Use .env.example como referência.
+.env
+.env.*
+!.env.example
+
+# Sistema operacional / editor
+.DS_Store
+*.local
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
