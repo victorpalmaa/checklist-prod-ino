@@ -6,6 +6,7 @@ import {
   Plus,
   LogOut,
 } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
@@ -21,35 +22,34 @@ import { cn } from "@/lib/utils";
 
 interface AppShellProps {
   children: React.ReactNode;
-  pageTitle?: string;
   className?: string;
 }
 
 const navItems = [
   {
     label: "Checklists",
-    href: "#",
+    to: "/checklists",
     icon: ClipboardList,
-    active: true,
   },
   {
     label: "Dashboard",
-    href: "#",
+    to: "/dashboard",
     icon: LayoutDashboard,
-    active: false,
   },
   {
     label: "Admin",
-    href: "#",
+    to: "/admin/templates",
     icon: Settings,
-    active: false,
   },
 ] as const;
 
-const USER_NAME = "Operador de produção";
-const USER_INITIALS = "OP";
+// TODO(C1): substituir pelo profile do AuthContext
+const USER_NAME = "Usuário";
+const USER_INITIALS = "U";
 
-export function AppShell({ children, pageTitle, className }: AppShellProps) {
+export function AppShell({ children, className }: AppShellProps) {
+  const navigate = useNavigate();
+
   return (
     <div className={cn("flex min-h-screen w-full bg-[var(--color-surface-page)]", className)}>
       <aside
@@ -69,23 +69,23 @@ export function AppShell({ children, pageTitle, className }: AppShellProps) {
               const Icon = item.icon;
               return (
                 <li key={item.label}>
-                  <a
-                    href={item.href}
-                    aria-current={item.active ? "page" : undefined}
-                    className={cn(
-                      "flex min-h-[44px] items-center gap-3 rounded-[10px] px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
-                      "min-w-[44px]",
-                      item.active
-                        ? "bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
-                        : "text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
-                    )}
+                  <NavLink
+                    to={item.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                        isActive
+                          ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                          : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                      )
+                    }
                   >
                     <Icon
                       className="h-5 w-5 shrink-0"
                       aria-hidden="true"
                     />
                     <span>{item.label}</span>
-                  </a>
+                  </NavLink>
                 </li>
               );
             })}
@@ -105,17 +105,18 @@ export function AppShell({ children, pageTitle, className }: AppShellProps) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center gap-4 border-b border-[var(--color-primary-border)] bg-[var(--color-surface-card)] px-6">
           <div className="min-w-0 flex-1">
-            {pageTitle ? (
-              <h2 className="text-title truncate">{pageTitle}</h2>
-            ) : (
-              <span className="text-caption text-[var(--color-fg-muted)]">
-                Checklist de produção
-              </span>
-            )}
+            <span className="text-caption text-[var(--color-fg-muted)]">
+              Checklist de produção
+            </span>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <Button variant="default" size="sm">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate("/checklists/novo")}
+              type="button"
+            >
               <Plus className="h-5 w-5" aria-hidden="true" />
               Novo registro
             </Button>
@@ -145,9 +146,6 @@ export function AppShell({ children, pageTitle, className }: AppShellProps) {
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[14px] font-semibold text-[var(--color-fg)]">
                       {USER_NAME}
-                    </span>
-                    <span className="text-caption text-[var(--color-fg-muted)] font-normal">
-                      Turno diurno
                     </span>
                   </div>
                 </DropdownMenuLabel>

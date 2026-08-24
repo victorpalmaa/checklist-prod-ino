@@ -151,7 +151,7 @@ export function DesignSystem() {
   const [selected, setSelected] = React.useState<string | undefined>("lote-ativo");
 
   return (
-    <AppShell pageTitle="Design system — validação Pronutrition">
+    <AppShell>
       <TooltipProvider delayDuration={150}>
         <div className="space-y-10 max-w-6xl">
           {/* ======= Tipografia ======= */}
