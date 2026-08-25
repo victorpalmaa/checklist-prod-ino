@@ -19,6 +19,7 @@ import { ChecklistEdit } from "@/pages/ChecklistEdit";
 import { AdminTemplates } from "@/pages/AdminTemplates";
 import { AdminTemplateDetail } from "@/pages/AdminTemplateDetail";
 import { Dashboard } from "@/pages/Dashboard";
+import { AuditLog } from "@/pages/AuditLog";
 import { NotFound } from "@/pages/NotFound";
 
 function Shell() {
@@ -69,6 +70,7 @@ export function AppRouter() {
               element={<AdminTemplateDetail />}
             />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/auditoria" element={<AuditLog />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

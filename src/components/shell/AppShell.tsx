@@ -5,10 +5,12 @@ import {
   Settings,
   Plus,
   LogOut,
+  ScrollText,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { Logo } from "@/components/brand/Logo";
+import { RoleGate } from "@/components/auth/RoleGate";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -102,6 +104,27 @@ export function AppShell({ children, className }: AppShellProps) {
                 </li>
               );
             })}
+            <RoleGate allow={["admin"]}>
+              <li>
+                <NavLink
+                  to="/auditoria"
+                  className={({ isActive }) =>
+                    cn(
+                      "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                      isActive
+                        ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                        : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                    )
+                  }
+                >
+                  <ScrollText
+                    className="h-5 w-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>Auditoria</span>
+                </NavLink>
+              </li>
+            </RoleGate>
           </ul>
         </nav>
 
