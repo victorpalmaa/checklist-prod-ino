@@ -18,6 +18,7 @@ import {
 } from "@/components/signatures/SignaturePanel";
 import type { SignatureRow } from "@/components/signatures/SignaturePanel";
 import { supabase } from "@/lib/supabase/client";
+import { mapSupabaseError } from "@/lib/errors";
 import { parseSnapshot, type RunStatus } from "@/types/form";
 import type { Tables } from "@/types/database";
 
@@ -152,7 +153,7 @@ export function ChecklistDetail() {
         >
           <h1 className="text-title">Registro não encontrado</h1>
           <p className="text-caption mt-2">
-            {loadError?.message ?? "Este checklist não existe ou não pode ser exibido."}
+            {loadError ? mapSupabaseError(loadError) : "Este checklist não existe ou não pode ser exibido."}
           </p>
           <div className="mt-5 flex gap-3">
             <Button onClick={() => navigate("/checklists")} className="min-h-[44px]">
