@@ -194,7 +194,7 @@ export function ChecklistEdit() {
             upserts.push(base);
             continue;
           }
-          if (fieldMeta.field_type === "number") {
+          if (fieldMeta.field_type === "number" || fieldMeta.field_type === "computed_avg") {
             const n = typeof raw === "number" ? raw : Number(raw);
             upserts.push({
               ...base,

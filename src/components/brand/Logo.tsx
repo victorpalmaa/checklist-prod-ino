@@ -11,7 +11,7 @@ interface LogoProps {
 }
 
 const variantToSrc: Record<LogoVariant, string> = {
-  color: "/brand/logo-color.svg",
+  color: "/brand/logo-pronutrition-symbol.png",
   white: "/brand/logo-white.svg",
   mono: "/brand/logo-mono.svg",
 };

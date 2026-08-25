@@ -339,15 +339,34 @@ export function FieldRenderer<T extends FieldValues>({
             </span>
           </Label>
           <div className="relative">
-            <Input
-              id={id}
-              type="text"
-              disabled
-              readOnly
-              value="—"
-              {...(unit
-                ? { className: "pr-14" }
-                : undefined)}
+            <Controller
+              control={control}
+              name={key as any}
+              render={({ field: f }) => {
+                const raw = f.value;
+                let display = "—";
+                if (typeof raw === "number" && !Number.isNaN(raw)) {
+                  display = raw.toFixed(4);
+                } else if (
+                  typeof raw === "string" &&
+                  raw.length > 0 &&
+                  !Number.isNaN(Number(raw))
+                ) {
+                  display = Number(raw).toFixed(4);
+                }
+                return (
+                  <Input
+                    id={id}
+                    type="text"
+                    disabled
+                    readOnly
+                    value={display}
+                    {...(unit
+                      ? { className: "pr-14 tabular-nums" }
+                      : { className: "tabular-nums" })}
+                  />
+                );
+              }}
             />
             {unit ? (
               <div

@@ -1,5 +1,5 @@
-import { useMemo, type ReactNode } from "react";
-import { useForm, type Control, type FieldValues, type UseFormReturn } from "react-hook-form";
+import { useEffect, useMemo, type ReactNode } from "react";
+import { useForm, useWatch, type Control, type FieldValues, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -74,7 +74,7 @@ export function buildInitialValues(
     })();
     const ftype = fMeta?.field_type ?? "text";
 
-    if (ftype === "number") {
+    if (ftype === "number" || ftype === "computed_avg") {
       sec[value.field_key] = value.value_num ?? null;
     } else if (ftype === "checkbox") {
       sec[value.field_key] = value.value_bool ?? null;
@@ -123,6 +123,58 @@ export function DynamicForm({
 
   const { fieldsByKey } = useMemo(() => extractFieldsByKey(snapshot), [snapshot]);
   const sections = useMemo(() => sortedSections(snapshot), [snapshot]);
+
+  const watchedSections = useWatch({
+    control: form.control,
+    name: "sections",
+    disabled: readOnly,
+  });
+
+  useEffect(() => {
+    if (readOnly) return;
+    for (const section of sections) {
+      for (const field of section.fields) {
+        if (field.field_type !== "computed_avg") continue;
+        const srcKeys = field.computed_from ?? [];
+        if (srcKeys.length === 0) continue;
+        const sectionBucket = form.getValues(`sections.${section.key}`) ?? {};
+        const nums: number[] = [];
+        for (const k of srcKeys) {
+          const raw = sectionBucket[k];
+          if (typeof raw === "number" && !Number.isNaN(raw)) {
+            nums.push(raw);
+          } else if (
+            typeof raw === "string" &&
+            raw.length > 0 &&
+            !Number.isNaN(Number(raw))
+          ) {
+            nums.push(Number(raw));
+          }
+        }
+        let next: number | null = null;
+        if (nums.length > 0) {
+          const sum = nums.reduce((acc, n) => acc + n, 0);
+          const avg = sum / nums.length;
+          next = Math.round(avg * 10000) / 10000;
+        }
+        const current = sectionBucket[field.key];
+        if (current === next) continue;
+        if (current === null && next === null) continue;
+        if (
+          typeof current === "number" &&
+          typeof next === "number" &&
+          Number.isNaN(current) === Number.isNaN(next) &&
+          Math.abs(current - next) < 1e-9
+        ) {
+          continue;
+        }
+        form.setValue(`sections.${section.key}.${field.key}`, next, {
+          shouldDirty: true,
+          shouldValidate: false,
+        });
+      }
+    }
+  }, [watchedSections, sections, form, readOnly]);
 
   return (
     <form
