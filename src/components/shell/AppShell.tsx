@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -43,12 +44,24 @@ const navItems = [
   },
 ] as const;
 
-// TODO(C1): substituir pelo profile do AuthContext
-const USER_NAME = "Usuário";
-const USER_INITIALS = "U";
+function deriveInitials(fullName: string | null | undefined): string {
+  if (!fullName) return "";
+  const raw = fullName.trim();
+  if (raw.length === 0) return "";
+  const parts = raw.split(/\s+/);
+  const first = parts[0] ?? "";
+  if (parts.length === 1) {
+    return first.charAt(0).toUpperCase();
+  }
+  const last = parts[parts.length - 1] ?? "";
+  return (first.charAt(0) + last.charAt(0)).toUpperCase();
+}
 
 export function AppShell({ children, className }: AppShellProps) {
   const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
+  const userName = profile?.full_name ?? "";
+  const userInitials = deriveInitials(profile?.full_name);
 
   return (
     <div className={cn("flex min-h-screen w-full bg-[var(--color-surface-page)]", className)}>
@@ -126,7 +139,7 @@ export function AppShell({ children, className }: AppShellProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  aria-label={`Conta de ${USER_NAME}`}
+                  aria-label={`Conta de ${userName}`}
                   className="h-11 w-11"
                 >
                   <span
@@ -137,7 +150,7 @@ export function AppShell({ children, className }: AppShellProps) {
                     }}
                     aria-hidden="true"
                   >
-                    {USER_INITIALS}
+                    {userInitials}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
@@ -145,12 +158,12 @@ export function AppShell({ children, className }: AppShellProps) {
                 <DropdownMenuLabel>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[14px] font-semibold text-[var(--color-fg)]">
-                      {USER_NAME}
+                      {userName}
                     </span>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onSelect={signOut}>
                   <LogOut className="h-4 w-4" aria-hidden="true" />
                   Sair
                 </DropdownMenuItem>

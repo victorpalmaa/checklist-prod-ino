@@ -6,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/shell/AppShell";
 import { DesignSystem } from "@/pages/DesignSystem";
 import { Login } from "@/pages/Login";
@@ -31,19 +32,24 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route element={<Shell />}>
-          <Route path="/" element={<Navigate to="/checklists" replace />} />
-          <Route path="/checklists" element={<ChecklistsList />} />
-          <Route path="/checklists/novo" element={<ChecklistNew />} />
-          <Route path="/checklists/:id" element={<ChecklistDetail />} />
-          <Route path="/checklists/:id/editar" element={<ChecklistEdit />} />
-          <Route path="/admin/templates" element={<AdminTemplates />} />
-          <Route
-            path="/admin/templates/:id"
-            element={<AdminTemplateDetail />}
-          />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="*" element={<NotFound />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Shell />}>
+            <Route path="/" element={<Navigate to="/checklists" replace />} />
+            <Route path="/checklists" element={<ChecklistsList />} />
+            <Route path="/checklists/novo" element={<ChecklistNew />} />
+            <Route path="/checklists/:id" element={<ChecklistDetail />} />
+            <Route
+              path="/checklists/:id/editar"
+              element={<ChecklistEdit />}
+            />
+            <Route path="/admin/templates" element={<AdminTemplates />} />
+            <Route
+              path="/admin/templates/:id"
+              element={<AdminTemplateDetail />}
+            />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
         </Route>
         {import.meta.env.DEV && (
           <Route path="/design-system" element={<DesignSystem />} />

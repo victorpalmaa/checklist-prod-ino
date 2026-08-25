@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,7 +37,8 @@ function mapAuthError(message: string | undefined): string {
 
 export function Login() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const location = useLocation();
+  const { signIn, session, loading } = useAuth();
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState<boolean>(false);
 
@@ -58,12 +59,26 @@ export function Login() {
 
   const persist = watch("persist");
 
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-page)]">
+        <span className="text-caption">Carregando...</span>
+      </div>
+    );
+  }
+
+  if (session) {
+    return <Navigate to="/checklists" replace />;
+  }
+
   const onSubmit = async (values: LoginFormValues) => {
     setSubmitting(true);
     setAuthError(null);
     try {
       await signIn(values.email, values.password, values.persist);
-      navigate("/checklists", { replace: true });
+      const from = (location.state as { from?: { pathname: string } })
+        ?.from?.pathname ?? "/checklists";
+      navigate(from, { replace: true });
     } catch (err) {
       const msg = err && typeof err === "object" && "message" in err
         ? (err as { message?: string }).message
