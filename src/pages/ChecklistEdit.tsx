@@ -52,6 +52,7 @@ export function ChecklistEdit() {
   const queryClient = useQueryClient();
   const formRef = useRef<DynamicFormHandle>(null);
   const [submitBusy, setSubmitBusy] = useState<boolean>(false);
+  const [saveExitBusy, setSaveExitBusy] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [pendingForm, setPendingForm] = useState<{
     values: RunFormValues;
@@ -338,6 +339,7 @@ export function ChecklistEdit() {
                 type="button"
                 variant="ghost"
                 onClick={() => navigate("/checklists")}
+                disabled={submitBusy || saveExitBusy}
                 className="min-h-[44px] min-w-[120px]"
               >
                 Voltar
@@ -345,8 +347,31 @@ export function ChecklistEdit() {
               {run.status === "draft" ? (
                 <Button
                   type="button"
+                  variant="outline"
+                  disabled={submitBusy || saveExitBusy}
+                  onClick={async () => {
+                    const vals = await formRef.current?.submit();
+                    if (!vals) return;
+                    setSaveExitBusy(true);
+                    try {
+                      const ok = await performSave(vals);
+                      if (!ok) return;
+                      toast.success("Alterações salvas com sucesso.");
+                      navigate("/checklists", { replace: true });
+                    } finally {
+                      setSaveExitBusy(false);
+                    }
+                  }}
+                  className="min-h-[44px] min-w-[160px]"
+                >
+                  {saveExitBusy ? "Salvando..." : "Salvar e sair"}
+                </Button>
+              ) : null}
+              {run.status === "draft" ? (
+                <Button
+                  type="button"
                   variant="secondary"
-                  disabled={submitBusy}
+                  disabled={submitBusy || saveExitBusy}
                   onClick={async () => {
                     const vals = await formRef.current?.submit();
                     if (!vals) return;

@@ -11,6 +11,8 @@ import { AppShell } from "@/components/shell/AppShell";
 import { DesignSystem } from "@/pages/DesignSystem";
 import { Login } from "@/pages/Login";
 import { ChecklistsList } from "@/pages/ChecklistsList";
+import { ChecklistTypeSelect } from "@/pages/ChecklistTypeSelect";
+import { ChecklistTypePlaceholder } from "@/pages/ChecklistTypePlaceholder";
 import { ChecklistNew } from "@/pages/ChecklistNew";
 import { ChecklistDetail } from "@/pages/ChecklistDetail";
 import { ChecklistEdit } from "@/pages/ChecklistEdit";
@@ -36,7 +38,26 @@ export function AppRouter() {
           <Route element={<Shell />}>
             <Route path="/" element={<Navigate to="/checklists" replace />} />
             <Route path="/checklists" element={<ChecklistsList />} />
-            <Route path="/checklists/novo" element={<ChecklistNew />} />
+            <Route
+              path="/checklists/novo"
+              element={<ChecklistTypeSelect />}
+            />
+            <Route
+              path="/checklists/novo/po"
+              element={<ChecklistNew />}
+            />
+            <Route
+              path="/checklists/novo/gel"
+              element={<ChecklistTypePlaceholder />}
+            />
+            <Route
+              path="/checklists/novo/capsula"
+              element={<ChecklistTypePlaceholder />}
+            />
+            <Route
+              path="/checklists/novo/goma"
+              element={<ChecklistTypePlaceholder />}
+            />
             <Route path="/checklists/:id" element={<ChecklistDetail />} />
             <Route
               path="/checklists/:id/editar"

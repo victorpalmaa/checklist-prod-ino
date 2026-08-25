@@ -12,6 +12,11 @@ import {
   RunStatusBadge,
   type RunStatusValue,
 } from "@/components/status/RunStatus";
+import {
+  SignaturePanel,
+  CHECKLIST_SIGNATURES_QUERY_KEY,
+} from "@/components/signatures/SignaturePanel";
+import type { SignatureRow } from "@/components/signatures/SignaturePanel";
 import { supabase } from "@/lib/supabase/client";
 import { parseSnapshot, type RunStatus } from "@/types/form";
 import type { Tables } from "@/types/database";
@@ -101,8 +106,26 @@ export function ChecklistDetail() {
     },
   });
 
-  const isLoading = runQuery.isLoading || valuesQuery.isLoading;
-  const loadError = runQuery.error || valuesQuery.error;
+  const signaturesQuery = useQuery<SignatureRow[], Error>({
+    queryKey: [...CHECKLIST_SIGNATURES_QUERY_KEY, id],
+    enabled: !!id && !!runQuery.data,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("run_signatures")
+        .select("*")
+        .eq("run_id", id)
+        .order("signed_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as SignatureRow[];
+    },
+    staleTime: 30_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const isLoading =
+    runQuery.isLoading || valuesQuery.isLoading || signaturesQuery.isLoading;
+  const loadError = runQuery.error || valuesQuery.error || signaturesQuery.error;
 
   if (!id) {
     return <Navigate to="/checklists" replace />;
@@ -205,8 +228,13 @@ export function ChecklistDetail() {
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-eyebrow">Status</dt>
-              <dd className="pt-1">
+              <dd className="flex flex-wrap items-center gap-2 pt-1">
                 <RunStatusBadge status={status as RunStatusValue} />
+                {status === "signed" && run.completed_at ? (
+                  <span className="text-caption text-[var(--color-fg-secondary)] tabular-nums">
+                    Finalizado em {formatDateTime(run.completed_at)}
+                  </span>
+                ) : null}
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">
@@ -288,6 +316,12 @@ export function ChecklistDetail() {
           </Card>
         );
       })}
+
+      <SignaturePanel
+        runId={id}
+        runStatus={status as RunStatusValue}
+        signatures={signaturesQuery.data}
+      />
 
       <div className="flex items-center justify-end gap-3 pt-2">
         <Link

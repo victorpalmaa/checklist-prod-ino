@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -231,23 +231,33 @@ export function ChecklistNew() {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-between gap-3 pt-2">
           <Button
             type="button"
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            disabled={submitting}
+            variant="outline"
+            asChild
             className="min-h-[44px] min-w-[120px]"
           >
-            Cancelar
+            <Link to="/checklists/novo">Voltar</Link>
           </Button>
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="min-h-[44px] min-w-[140px]"
-          >
-            {submitting ? "Criando..." : "Criar registro"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate(-1)}
+              disabled={submitting}
+              className="min-h-[44px] min-w-[120px]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="min-h-[44px] min-w-[140px]"
+            >
+              {submitting ? "Criando..." : "Criar registro"}
+            </Button>
+          </div>
         </div>
       </form>
     </div>
