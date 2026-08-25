@@ -1,4 +1,9 @@
-import { Controller, type Control, type FieldValues } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+} from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,7 +47,7 @@ export function FieldRenderer<T extends FieldValues>({
   disabled = false,
   fullKey,
 }: FieldRendererProps<T>) {
-  const key = (fullKey ?? formFieldKey(sectionKey, field.key)) as unknown as keyof T;
+  const key = (fullKey ?? formFieldKey(sectionKey, field.key)) as Path<T>;
   const id = `field-${sectionKey}-${field.key}`;
   const unit = field.unit?.trim() ? field.unit.trim() : null;
 
@@ -64,7 +69,7 @@ export function FieldRenderer<T extends FieldValues>({
         >
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <span className="tabular-nums">{formatValueForDisplay(f.value)}</span>
             )}
@@ -89,7 +94,7 @@ export function FieldRenderer<T extends FieldValues>({
           <div className="relative">
             <Controller
               control={control}
-              name={key as any}
+              name={key}
               render={({ field: f }) => (
                 <Input
                   id={id}
@@ -129,7 +134,7 @@ export function FieldRenderer<T extends FieldValues>({
           </Label>
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <Textarea
                 id={id}
@@ -157,7 +162,7 @@ export function FieldRenderer<T extends FieldValues>({
           <div className="relative">
             <Controller
               control={control}
-              name={key as any}
+              name={key}
               render={({ field: f }) => (
                 <Input
                   id={id}
@@ -210,7 +215,7 @@ export function FieldRenderer<T extends FieldValues>({
           </Label>
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <Input
                 id={id}
@@ -239,7 +244,7 @@ export function FieldRenderer<T extends FieldValues>({
           </Label>
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <RadioGroup
                 disabled={disabled}
@@ -277,7 +282,7 @@ export function FieldRenderer<T extends FieldValues>({
           </Label>
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <Select
                 disabled={disabled}
@@ -305,7 +310,7 @@ export function FieldRenderer<T extends FieldValues>({
         <div className="flex items-start gap-3 pt-1 min-h-[44px]">
           <Controller
             control={control}
-            name={key as any}
+            name={key}
             render={({ field: f }) => (
               <Checkbox
                 id={id}
@@ -341,7 +346,7 @@ export function FieldRenderer<T extends FieldValues>({
           <div className="relative">
             <Controller
               control={control}
-              name={key as any}
+              name={key}
               render={({ field: f }) => {
                 const raw = f.value;
                 let display = "—";

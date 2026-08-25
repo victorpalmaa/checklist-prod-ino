@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useId, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -80,14 +80,19 @@ export function ChecklistsList() {
   const qParam = searchParams.get("q") ?? "";
   const statusParam = searchParams.get("status") as RunStatus | null;
   const pageParam = Math.max(1, Number(searchParams.get("page") ?? "1") || 1);
+  const qVersion = useId();
 
-  const [qDraft, setQDraft] = useState(qParam);
-  const [debouncedQ, setDebouncedQ] = useState(qParam);
+  const [qDraft, setQDraft] = useState<string>(qParam);
+  const [debouncedQ, setDebouncedQ] = useState<string>(qParam);
+  const lastVersionRef = useRef<string>(qVersion);
 
   useEffect(() => {
-    setQDraft(qParam);
-    setDebouncedQ(qParam);
-  }, [qParam]);
+    if (qVersion !== lastVersionRef.current) {
+      lastVersionRef.current = qVersion;
+      setQDraft(qParam);
+      setDebouncedQ(qParam);
+    }
+  }, [qVersion, qParam]);
 
   useEffect(() => {
     const t = setTimeout(() => {

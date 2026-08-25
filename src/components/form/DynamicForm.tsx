@@ -141,11 +141,9 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
       () => ({
         getValues: () => form.getValues(),
         submit: async () => {
-          let captured: RunFormValues | null = null;
           const valid = await form.trigger();
           if (!valid) return null;
-          captured = form.getValues();
-          return captured;
+          return form.getValues();
         },
       }),
       [form],

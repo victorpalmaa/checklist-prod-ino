@@ -57,21 +57,6 @@ export function ChecklistNew() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
-  const typedProductType = (() => {
-    if (!tipo) return null;
-    if (!ALLOWED_TYPES.includes(tipo as AllowedProductType)) {
-      return null;
-    }
-    return tipo as AllowedProductType;
-  })();
-
-  if (!typedProductType) {
-    return <Navigate to="/checklists/novo" replace />;
-  }
-
-  const productTypeEnum = typedProductType as AllowedProductType &
-    Database["public"]["Enums"]["product_type"];
-
   const {
     register,
     handleSubmit,
@@ -86,6 +71,21 @@ export function ChecklistNew() {
       accompaniment_reason: "",
     },
   });
+
+  const typedProductType = (() => {
+    if (!tipo) return null;
+    if (!ALLOWED_TYPES.includes(tipo as AllowedProductType)) {
+      return null;
+    }
+    return tipo as AllowedProductType;
+  })();
+
+  if (!typedProductType) {
+    return <Navigate to="/checklists/novo" replace />;
+  }
+
+  const productTypeEnum = typedProductType as AllowedProductType &
+    Database["public"]["Enums"]["product_type"];
 
   async function onSubmit(data: CreateRunForm) {
     setSubmitting(true);
