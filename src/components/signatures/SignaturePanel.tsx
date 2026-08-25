@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase/client";
+import { mapSupabaseError } from "@/lib/errors";
 import type { Database } from "@/types/database";
 import type { RunStatusValue } from "@/components/status/RunStatus";
 import {
@@ -86,11 +87,7 @@ export function SignaturePanel({
         p_statement: statement,
       });
       if (error) {
-        const pgMsg =
-          error && typeof error === "object" && "message" in error
-            ? (error as { message?: string }).message
-            : undefined;
-        toast.error(pgMsg ?? "Não foi possível assinar. Tente novamente.");
+        toast.error(mapSupabaseError(error));
         return;
       }
       toast.success("Assinatura registrada com sucesso.");

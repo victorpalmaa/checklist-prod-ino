@@ -48,7 +48,7 @@ export function AppRouter() {
             />
             <Route
               path="/checklists/novo/gel"
-              element={<ChecklistTypePlaceholder />}
+              element={<ChecklistNew />}
             />
             <Route
               path="/checklists/novo/capsula"

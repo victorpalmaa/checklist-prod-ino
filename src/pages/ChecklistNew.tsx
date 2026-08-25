@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,7 +9,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { supabase } from "@/lib/supabase/client";
+import { mapSupabaseError } from "@/lib/errors";
+import {
+  SIGNATURE_ROLES_ORDER,
+  SIGNATURE_ROLE_LABEL,
+} from "@/components/signatures/signatureMeta";
+import type { Database } from "@/types/database";
+
+type AllowedProductType = "po" | "gel";
+
+const ALLOWED_TYPES: readonly AllowedProductType[] = ["po", "gel"] as const;
+
+const TYPE_LABEL: Record<AllowedProductType, string> = {
+  po: "Pó",
+  gel: "Gel",
+};
 
 const createRunSchema = z.object({
   product_name: z
@@ -30,38 +51,26 @@ const createRunSchema = z.object({
 
 type CreateRunForm = z.infer<typeof createRunSchema>;
 
-function mapCreateRunError(message: string | null | undefined): string {
-  if (!message) return "Não foi possível criar o registro. Tente novamente.";
-  if (/Sessão não autenticada/i.test(message)) {
-    return "Sua sessão expirou. Saia e entre novamente.";
-  }
-  if (/Usuário inativo/i.test(message)) {
-    return "Seu usuário não está autorizado para esta operação.";
-  }
-  if (/Perfil de usuário não encontrado/i.test(message)) {
-    return "Perfil de usuário não localizado.";
-  }
-  if (/nome do produto é obrigatório/i.test(message)) {
-    return "Informe o nome do produto.";
-  }
-  if (/cliente é obrigatório/i.test(message)) {
-    return "Informe o cliente.";
-  }
-  if (/código de formulação é obrigatório/i.test(message)) {
-    return "Informe o código de formulação.";
-  }
-  if (/data de produção é obrigatória/i.test(message)) {
-    return "Informe a data prevista de produção.";
-  }
-  if (/Nenhum template publicado/i.test(message)) {
-    return "Nenhum formulário publicado para este tipo de produto. Contate o administrador.";
-  }
-  return "Não foi possível criar o registro. Tente novamente.";
-}
-
 export function ChecklistNew() {
+  const { pathname } = useLocation();
+  const tipo = pathname.split("/").filter(Boolean).pop();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+
+  const typedProductType = (() => {
+    if (!tipo) return null;
+    if (!ALLOWED_TYPES.includes(tipo as AllowedProductType)) {
+      return null;
+    }
+    return tipo as AllowedProductType;
+  })();
+
+  if (!typedProductType) {
+    return <Navigate to="/checklists/novo" replace />;
+  }
+
+  const productTypeEnum = typedProductType as AllowedProductType &
+    Database["public"]["Enums"]["product_type"];
 
   const {
     register,
@@ -83,14 +92,14 @@ export function ChecklistNew() {
     try {
       const reasonTrim = data.accompaniment_reason?.trim() ?? "";
       const params: {
-        p_product_type: "po";
+        p_product_type: Database["public"]["Enums"]["product_type"];
         p_product_name: string;
         p_client: string;
         p_formulation_code: string;
         p_production_date: string;
         p_accompaniment_reason?: string;
       } = {
-        p_product_type: "po",
+        p_product_type: productTypeEnum,
         p_product_name: data.product_name.trim(),
         p_client: data.client.trim(),
         p_formulation_code: data.formulation_code.trim(),
@@ -106,10 +115,7 @@ export function ChecklistNew() {
       }
       navigate(`/checklists/${String(newRunId)}/editar`, { replace: true });
     } catch (err) {
-      const msg = err && typeof err === "object" && "message" in err
-        ? (err as { message?: string }).message
-        : undefined;
-      toast.error(mapCreateRunError(msg));
+      toast.error(mapSupabaseError(err));
     } finally {
       setSubmitting(false);
     }
@@ -118,7 +124,9 @@ export function ChecklistNew() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-display">Novo checklist</h1>
+        <h1 className="text-display">
+          Novo checklist — {TYPE_LABEL[typedProductType]}
+        </h1>
         <p className="text-caption text-[var(--color-fg-secondary)]">
           Preencha os dados de identificação do registro. Os campos do
           RED-029 serão carregados na próxima tela.
@@ -260,6 +268,37 @@ export function ChecklistNew() {
           </div>
         </div>
       </form>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Após o envio, este registro seguirá para assinatura de:
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {SIGNATURE_ROLES_ORDER.map((role, idx) => (
+            <div
+              key={role}
+              className="flex min-h-[44px] items-center gap-3 rounded-[10px] border border-[var(--color-primary-border)] bg-[var(--color-primary-tint)] px-4 py-2"
+            >
+              <span
+                className="text-caption tabular-nums text-[var(--color-primary-text)]"
+                aria-hidden
+              >
+                {String(idx + 1).padStart(2, "0")}
+              </span>
+              <span
+                aria-hidden
+                className="h-[7px] w-[7px] shrink-0 rounded-full"
+                style={{ backgroundColor: "var(--color-brand)" }}
+              />
+              <span className="text-body text-[var(--color-primary-text)]">
+                {SIGNATURE_ROLE_LABEL[role]}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

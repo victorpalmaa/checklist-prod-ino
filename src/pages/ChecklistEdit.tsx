@@ -23,6 +23,7 @@ import {
   type RunFormValues,
 } from "@/components/form/DynamicForm";
 import { supabase } from "@/lib/supabase/client";
+import { mapSupabaseError } from "@/lib/errors";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   parseSnapshot,
@@ -33,17 +34,6 @@ import {
 import type { Tables } from "@/types/database";
 
 const CHECKLIST_EDIT_QUERY_KEY = ["checklist-edit"] as const;
-
-function mapSaveError(message: string | null | undefined): string {
-  if (!message) return "Não foi possível salvar. Tente novamente.";
-  if (/Sessão não autenticada/i.test(message)) {
-    return "Sua sessão expirou. Saia e entre novamente.";
-  }
-  if (/run não encontrado|não é possível|rascunho|somente.*edit/i.test(message)) {
-    return "Este registro não pode ser alterado no momento.";
-  }
-  return "Não foi possível salvar. Tente novamente.";
-}
 
 export function ChecklistEdit() {
   const { id } = useParams() as { id: string };
@@ -272,10 +262,7 @@ export function ChecklistEdit() {
 
       return true;
     } catch (err) {
-      const msg = err && typeof err === "object" && "message" in err
-        ? (err as { message?: string }).message
-        : undefined;
-      toast.error(mapSaveError(msg));
+      toast.error(mapSupabaseError(err));
       return false;
     }
   }
@@ -296,11 +283,7 @@ export function ChecklistEdit() {
         p_run_id: id,
       });
       if (rpcErr) {
-        const pgMsg =
-          rpcErr && typeof rpcErr === "object" && "message" in rpcErr
-            ? (rpcErr as { message?: string }).message
-            : undefined;
-        toast.error(pgMsg ?? "Não foi possível enviar. Tente novamente.");
+        toast.error(mapSupabaseError(rpcErr));
         return;
       }
 

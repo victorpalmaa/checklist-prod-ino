@@ -8,7 +8,7 @@ const OPTIONS: {
   available: boolean;
 }[] = [
   { slug: "po", label: "Pó", available: true },
-  { slug: "gel", label: "Gel", available: false },
+  { slug: "gel", label: "Gel", available: true },
   { slug: "capsula", label: "Cápsula", available: false },
   { slug: "goma", label: "Goma", available: false },
 ];
