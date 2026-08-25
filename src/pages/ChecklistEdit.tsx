@@ -1,14 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DynamicForm,
   buildInitialValues,
   isSpecialKey,
   specialFieldKey,
+  type DynamicFormHandle,
   type RunFormValues,
 } from "@/components/form/DynamicForm";
 import { supabase } from "@/lib/supabase/client";
@@ -38,6 +49,13 @@ export function ChecklistEdit() {
   const { id } = useParams() as { id: string };
   const navigate = useNavigate();
   const auth = useAuth();
+  const queryClient = useQueryClient();
+  const formRef = useRef<DynamicFormHandle>(null);
+  const [submitBusy, setSubmitBusy] = useState<boolean>(false);
+  const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
+  const [pendingForm, setPendingForm] = useState<{
+    values: RunFormValues;
+  } | null>(null);
 
   const runQuery = useQuery<Tables<"checklist_runs"> | null, Error>({
     queryKey: [...CHECKLIST_EDIT_QUERY_KEY, "run", id],
@@ -157,11 +175,11 @@ export function ChecklistEdit() {
 
   const initial = buildInitialValues(snapshot, run, valuesQuery.data ?? []);
 
-  async function handleSave(values: RunFormValues) {
+  async function performSave(values: RunFormValues): Promise<boolean> {
     const currentUser = auth.user?.id;
     if (!currentUser) {
       toast.error("Sua sessão expirou. Saia e entre novamente.");
-      return;
+      return false;
     }
 
     try {
@@ -190,7 +208,6 @@ export function ChecklistEdit() {
           } as Tables<"run_values">;
 
           if (raw === null || raw === undefined || raw === "") {
-            // Para RLS: valores vazios → gravar tudo null. Sem delete: manter row
             upserts.push(base);
             continue;
           }
@@ -252,43 +269,129 @@ export function ChecklistEdit() {
         .eq("id", id);
       if (updateError) throw updateError;
 
-      toast.success("Alterações salvas com sucesso.");
+      return true;
     } catch (err) {
       const msg = err && typeof err === "object" && "message" in err
         ? (err as { message?: string }).message
         : undefined;
       toast.error(mapSaveError(msg));
+      return false;
+    }
+  }
+
+  async function handleSave(values: RunFormValues) {
+    const ok = await performSave(values);
+    if (ok) toast.success("Alterações salvas com sucesso.");
+  }
+
+  async function handleSubmitAfterSave() {
+    if (!pendingForm) return;
+    setSubmitBusy(true);
+    try {
+      const saved = await performSave(pendingForm.values);
+      if (!saved) return;
+
+      const { error: rpcErr } = await supabase.rpc("submit_run", {
+        p_run_id: id,
+      });
+      if (rpcErr) {
+        const pgMsg =
+          rpcErr && typeof rpcErr === "object" && "message" in rpcErr
+            ? (rpcErr as { message?: string }).message
+            : undefined;
+        toast.error(pgMsg ?? "Não foi possível enviar. Tente novamente.");
+        return;
+      }
+
+      await queryClient.invalidateQueries({
+        queryKey: [...CHECKLIST_EDIT_QUERY_KEY, "run", id],
+      });
+      navigate(`/checklists/${id}`, { replace: true });
+    } finally {
+      setSubmitBusy(false);
+      setPendingForm(null);
+      setConfirmOpen(false);
     }
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-display">
-          Checklist — {run.product_name}
-        </h1>
-        <p className="text-caption text-[var(--color-fg-secondary)]">
-          {run.client} · Formulação {run.formulation_code} ·{" "}
-          {snapshot.document_code} Rev. {snapshot.revision}
-        </p>
+    <>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-display">
+            Checklist — {run.product_name}
+          </h1>
+          <p className="text-caption text-[var(--color-fg-secondary)]">
+            {run.client} · Formulação {run.formulation_code} ·{" "}
+            {snapshot.document_code} Rev. {snapshot.revision}
+          </p>
+        </div>
+
+        <DynamicForm
+          ref={formRef}
+          snapshot={snapshot}
+          initial={initial}
+          onSubmit={handleSave}
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => navigate("/checklists")}
+                className="min-h-[44px] min-w-[120px]"
+              >
+                Voltar
+              </Button>
+              {run.status === "draft" ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={submitBusy}
+                  onClick={async () => {
+                    const vals = await formRef.current?.submit();
+                    if (!vals) return;
+                    setPendingForm({ values: vals });
+                    setConfirmOpen(true);
+                  }}
+                  className="min-h-[44px] min-w-[200px]"
+                >
+                  {submitBusy ? "Enviando..." : "Enviar para assinatura"}
+                </Button>
+              ) : null}
+            </>
+          }
+        />
       </div>
 
-      <DynamicForm
-        snapshot={snapshot}
-        initial={initial}
-        onSubmit={handleSave}
-        actions={
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => navigate("/checklists")}
-            className="min-h-[44px] min-w-[120px]"
-          >
-            Voltar
-          </Button>
-        }
-      />
-    </div>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar para assinatura</AlertDialogTitle>
+            <AlertDialogDescription>
+              Após o envio, o registro não poderá mais ser editado.
+              Correções exigem cancelamento e nova versão.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingForm(null);
+              }}
+              className="min-h-[44px]"
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubmitAfterSave}
+              disabled={submitBusy}
+              className="min-h-[44px]"
+            >
+              {submitBusy ? "Enviando..." : "Confirmar envio"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

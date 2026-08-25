@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
@@ -45,9 +45,8 @@ export function Login() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
-    watch,
-    setValue,
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -56,8 +55,6 @@ export function Login() {
       persist: false,
     },
   });
-
-  const persist = watch("persist");
 
   if (loading) {
     return (
@@ -96,9 +93,9 @@ export function Login() {
           <Logo variant="color" height={32} />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 text-center">
           <h1 className="text-title">Entrar</h1>
-          <p className="text-caption mt-2">
+          <p className="text-label mt-2">
             Portal de checklist de produção — RED-029
           </p>
         </div>
@@ -147,19 +144,26 @@ export function Login() {
             ) : null}
           </div>
 
-          <div className="flex items-start gap-3 pt-1">
-            <Checkbox
-              id="persist"
-              checked={persist}
-              onCheckedChange={(v) => {
-                setValue("persist", v === true);
-              }}
-              className="mt-0.5"
+          <label
+            htmlFor="persist"
+            className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-[10px] px-2 py-2 font-normal text-[var(--color-fg)]"
+          >
+            <Controller
+              control={control}
+              name="persist"
+              render={({ field }) => (
+                <Checkbox
+                  id="persist"
+                  checked={Boolean(field.value)}
+                  onCheckedChange={(v) => {
+                    field.onChange(v === true);
+                  }}
+                  className="h-[20px] w-[20px] min-h-[20px] min-w-[20px] shrink-0"
+                />
+              )}
             />
-            <Label htmlFor="persist" className="cursor-pointer font-normal">
-              Manter conectado neste dispositivo
-            </Label>
-          </div>
+            <span>Manter conectado neste dispositivo</span>
+          </label>
 
           {authError ? (
             <div

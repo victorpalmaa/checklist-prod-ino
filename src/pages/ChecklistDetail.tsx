@@ -8,16 +8,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  RunStatusBadge,
+  type RunStatusValue,
+} from "@/components/status/RunStatus";
 import { supabase } from "@/lib/supabase/client";
 import { parseSnapshot, type RunStatus } from "@/types/form";
 import type { Tables } from "@/types/database";
-
-const STATUS_LABEL: Record<RunStatus, string> = {
-  draft: "Rascunho",
-  submitted: "Aguardando assinaturas",
-  signed: "Assinado",
-  voided: "Cancelado",
-};
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -208,8 +205,8 @@ export function ChecklistDetail() {
             </div>
             <div className="flex flex-col gap-0.5">
               <dt className="text-eyebrow">Status</dt>
-              <dd className="text-[15px] text-[var(--color-fg)]">
-                {STATUS_LABEL[status] ?? status}
+              <dd className="pt-1">
+                <RunStatusBadge status={status as RunStatusValue} />
               </dd>
             </div>
             <div className="flex flex-col gap-0.5">

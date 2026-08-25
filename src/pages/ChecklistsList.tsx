@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import { RunStatusBadge } from "@/components/status/RunStatus";
 import {
   Table,
   TableBody,
@@ -15,13 +16,6 @@ import {
 } from "@/components/ui/table";
 
 type RunRow = Database["public"]["Tables"]["checklist_runs"]["Row"];
-
-const STATUS_LABEL: Record<RunRow["status"], string> = {
-  draft: "Rascunho",
-  submitted: "Enviado",
-  signed: "Assinado",
-  voided: "Anulado",
-};
 
 function formatDatePtBr(iso: string | null): string {
   if (!iso) return "—";
@@ -136,7 +130,9 @@ export function ChecklistsList() {
                 <TableCell>{run.client}</TableCell>
                 <TableCell>{run.batch_number ?? "—"}</TableCell>
                 <TableCell>{formatDatePtBr(run.production_date)}</TableCell>
-                <TableCell>{STATUS_LABEL[run.status]}</TableCell>
+                <TableCell>
+                  <RunStatusBadge status={run.status} />
+                </TableCell>
                 <TableCell className="text-[var(--color-fg-secondary)]">
                   {formatDateTimePtBr(run.created_at)}
                 </TableCell>

@@ -1,4 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { useForm, useWatch, type Control, type FieldValues, type UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,6 +104,11 @@ function sortedFields(section: SnapshotSection): SnapshotField[] {
   return [...section.fields].sort((a, b) => a.sort_order - b.sort_order);
 }
 
+export interface DynamicFormHandle {
+  getValues: () => RunFormValues;
+  submit: () => Promise<RunFormValues | null>;
+}
+
 export interface DynamicFormProps {
   snapshot: TemplateSnapshot;
   initial: RunFormValues;
@@ -109,17 +120,36 @@ export interface DynamicFormProps {
   actions?: ReactNode;
 }
 
-export function DynamicForm({
-  snapshot,
-  initial,
-  readOnly = false,
-  onSubmit,
-  actions,
-}: DynamicFormProps) {
-  const form = useForm<RunFormValues>({
-    defaultValues: initial,
-    values: initial,
-  });
+export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
+  function DynamicForm(
+    {
+      snapshot,
+      initial,
+      readOnly = false,
+      onSubmit,
+      actions,
+    }: DynamicFormProps,
+    ref,
+  ) {
+    const form = useForm<RunFormValues>({
+      defaultValues: initial,
+      values: initial,
+    });
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        getValues: () => form.getValues(),
+        submit: async () => {
+          let captured: RunFormValues | null = null;
+          const valid = await form.trigger();
+          if (!valid) return null;
+          captured = form.getValues();
+          return captured;
+        },
+      }),
+      [form],
+    );
 
   const { fieldsByKey } = useMemo(() => extractFieldsByKey(snapshot), [snapshot]);
   const sections = useMemo(() => sortedSections(snapshot), [snapshot]);
@@ -183,6 +213,7 @@ export function DynamicForm({
         await onSubmit(values, form);
       })}
       className="flex flex-col gap-6"
+      data-dynamic-checklist-form
     >
       {sections.map((section) => {
         const fields = sortedFields(section);
@@ -237,4 +268,5 @@ export function DynamicForm({
       <span className="sr-only" data-fields-count={fieldsByKey.size} />
     </form>
   );
-}
+  },
+);
