@@ -14,6 +14,7 @@ import type {
 import type { Tables } from "@/types/database";
 import { SIGNATURE_ROLE_LABEL } from "@/components/signatures/signatureMeta";
 import type { SignatureRole } from "@/components/signatures/signatureMeta";
+import { isFieldVisible } from "@/lib/form/visibility";
 
 const BRAND = {
   primary: "#6A4DBE",
@@ -322,20 +323,6 @@ function buildSectionsData(
     sectionsData[sec.key] = bucket;
   }
   return sectionsData;
-}
-
-function isFieldVisible(
-  field: SnapshotField,
-  sectionKey: string,
-  sectionsData: Record<
-    string,
-    Record<string, string | number | boolean | null | undefined>
-  >,
-): boolean {
-  if (!field.visible_if) return true;
-  const sectionBucket = sectionsData[sectionKey] ?? {};
-  const currentValue = sectionBucket[field.visible_if.field];
-  return currentValue === field.visible_if.equals;
 }
 
 function formatFieldValue(

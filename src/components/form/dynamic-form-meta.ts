@@ -5,6 +5,8 @@ import type {
   SnapshotSection,
 } from "@/types/form";
 import type { Tables } from "@/types/database";
+import { isFieldVisible } from "@/lib/form/visibility";
+export { isFieldVisible };
 
 export const SPECIAL_FIELD_KEYS = ["batch_number", "production_date"] as const;
 export type SpecialFieldKey = (typeof SPECIAL_FIELD_KEYS)[number];
@@ -102,15 +104,4 @@ export function sortedSections(snapshot: TemplateSnapshot): SnapshotSection[] {
 
 export function sortedFields(section: SnapshotSection): SnapshotField[] {
   return [...section.fields].sort((a, b) => a.sort_order - b.sort_order);
-}
-
-export function isFieldVisible(
-  field: SnapshotField,
-  sectionKey: string,
-  sectionsData: Record<string, Record<string, string | number | boolean | null | undefined>>,
-): boolean {
-  if (!field.visible_if) return true;
-  const sectionBucket = sectionsData[sectionKey] ?? {};
-  const currentValue = sectionBucket[field.visible_if.field];
-  return currentValue === field.visible_if.equals;
 }
