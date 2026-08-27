@@ -20,6 +20,7 @@ import { AdminTemplates } from "@/pages/AdminTemplates";
 import { AdminTemplateDetail } from "@/pages/AdminTemplateDetail";
 import { Dashboard } from "@/pages/Dashboard";
 import { AuditLog } from "@/pages/AuditLog";
+import { AdminUsers } from "@/pages/AdminUsers";
 import { NotFound } from "@/pages/NotFound";
 
 function Shell() {
@@ -71,6 +72,7 @@ export function AppRouter() {
             />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auditoria" element={<AuditLog />} />
+            <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Route>

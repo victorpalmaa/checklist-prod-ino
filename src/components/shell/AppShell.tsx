@@ -6,6 +6,7 @@ import {
   Plus,
   LogOut,
   ScrollText,
+  Users,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -122,6 +123,27 @@ export function AppShell({ children, className }: AppShellProps) {
                     aria-hidden="true"
                   />
                   <span>Auditoria</span>
+                </NavLink>
+              </li>
+            </RoleGate>
+            <RoleGate allow={["admin"]}>
+              <li>
+                <NavLink
+                  to="/admin/usuarios"
+                  className={({ isActive }) =>
+                    cn(
+                      "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                      isActive
+                        ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                        : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                    )
+                  }
+                >
+                  <Users
+                    className="h-5 w-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>Usuários</span>
                 </NavLink>
               </li>
             </RoleGate>
