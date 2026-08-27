@@ -253,8 +253,7 @@ export function AdminUsers() {
           aria-hidden="true"
         />
         <p className="text-body text-[var(--color-primary-text)]">
-          Para criar uma nova conta, use o painel do Supabase (Authentication →
-          Add user). Esta tela gerencia usuários já existentes.
+          Para criar uma nova conta, entre em contato com o Victor.
         </p>
       </div>
 

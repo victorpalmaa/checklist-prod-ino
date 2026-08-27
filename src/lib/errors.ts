@@ -99,7 +99,6 @@ function extractPgError(err: unknown): PostgresErrorShape | null {
 
 export function mapSupabaseError(error: unknown): string {
   if (import.meta.env.DEV) {
-    // eslint-disable-next-line no-console
     console.error("[supabase]", error);
   }
 

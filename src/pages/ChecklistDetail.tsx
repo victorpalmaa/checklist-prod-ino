@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -8,15 +10,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RunStatusBadge } from "@/components/status/RunStatus";
+import type { RunStatusValue } from "@/components/status/run-status-meta";
+import { SignaturePanel } from "@/components/signatures/SignaturePanel";
 import {
-  RunStatusBadge,
-  type RunStatusValue,
-} from "@/components/status/RunStatus";
-import {
-  SignaturePanel,
   CHECKLIST_SIGNATURES_QUERY_KEY,
-} from "@/components/signatures/SignaturePanel";
-import type { SignatureRow } from "@/components/signatures/SignaturePanel";
+  type SignatureRow,
+} from "@/components/signatures/signature-panel-meta";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
 import { parseSnapshot, type RunStatus } from "@/types/form";
@@ -71,9 +71,61 @@ function displayValueFromField(
   return rv.value_text && rv.value_text.length > 0 ? rv.value_text : "—";
 }
 
+function sanitizeFilename(s: string): string {
+  return s.replace(/[^\w\-.]/g, "_").replace(/_+/g, "_");
+}
+
 export function ChecklistDetail() {
   const { id } = useParams() as { id: string };
   const navigate = useNavigate();
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+
+  async function handleDownloadPdf() {
+    if (!runQuery.data || !valuesQuery.data || !signaturesQuery.data) return;
+    let snapshotLocal;
+    try {
+      snapshotLocal = parseSnapshot(runQuery.data.template_snapshot as unknown);
+    } catch {
+      toast.error("Não foi possível ler o formulário para gerar o PDF.");
+      return;
+    }
+    setPdfLoading(true);
+    try {
+      const [{ pdf }, { ChecklistPdfDocument }] = await Promise.all([
+        import("@react-pdf/renderer"),
+        import("@/lib/pdf/ChecklistPdfDocument"),
+      ]);
+      const run = runQuery.data;
+      const blob = await pdf(
+        <ChecklistPdfDocument
+          run={run}
+          snapshot={snapshotLocal}
+          values={valuesQuery.data}
+          signatures={signaturesQuery.data}
+        />,
+      ).toBlob();
+      const url = URL.createObjectURL(blob);
+      const batchPart = run.batch_number && run.batch_number.length > 0
+        ? run.batch_number
+        : "sem-lote";
+      const idPart = run.id.slice(0, 8);
+      const filename = sanitizeFilename(
+        `${snapshotLocal.document_code}_${snapshotLocal.revision}_${batchPart}_${idPart}.pdf`,
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar o PDF. Tente novamente.");
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
   const runQuery = useQuery<Tables<"checklist_runs"> | null, Error>({
     queryKey: ["checklist-detail", "run", id],
@@ -276,6 +328,14 @@ export function ChecklistDetail() {
               <div className="mt-1">{run.accompaniment_reason}</div>
             </div>
           ) : null}
+          <Button
+            onClick={handleDownloadPdf}
+            disabled={pdfLoading}
+            className="min-h-[44px]"
+            variant="secondary"
+          >
+            {pdfLoading ? "Gerando..." : "Baixar PDF"}
+          </Button>
           {status === "draft" ? (
             <Button
               onClick={() => navigate(`/checklists/${run.id}/editar`)}

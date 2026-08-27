@@ -22,21 +22,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
-import type { Database } from "@/types/database";
-import type { RunStatusValue } from "@/components/status/RunStatus";
+import type { RunStatusValue } from "@/components/status/run-status-meta";
 import {
   SIGNATURE_ROLES_ORDER,
   SIGNATURE_ROLE_LABEL,
   STATEMENT_BY_ROLE,
   type SignatureRole,
 } from "./signatureMeta";
-
-export type SignatureRow =
-  Database["public"]["Tables"]["run_signatures"]["Row"];
-
-export const CHECKLIST_SIGNATURES_QUERY_KEY = [
-  "checklist-run-signatures",
-] as const;
+import {
+  type SignatureRow,
+  CHECKLIST_SIGNATURES_QUERY_KEY,
+} from "./signature-panel-meta";
 
 function formatDateTimePtBr(iso: string | null): string {
   if (!iso) return "—";

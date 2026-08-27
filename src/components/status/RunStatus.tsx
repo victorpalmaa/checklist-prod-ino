@@ -1,15 +1,8 @@
-import type { Database } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
-
-export type RunStatusValue =
-  Database["public"]["Enums"]["run_status"];
-
-export const RUN_STATUS_LABEL: Record<RunStatusValue, string> = {
-  draft: "Rascunho",
-  submitted: "Aguardando assinaturas",
-  signed: "Assinado",
-  voided: "Cancelado",
-};
+import {
+  RUN_STATUS_LABEL,
+  type RunStatusValue,
+} from "./run-status-meta";
 
 const STATUS_VARIANT: Record<
   RunStatusValue,

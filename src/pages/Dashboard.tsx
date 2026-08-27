@@ -26,8 +26,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   RUN_STATUS_LABEL,
-  RunStatusValue,
-} from "@/components/status/RunStatus";
+  type RunStatusValue,
+} from "@/components/status/run-status-meta";
 
 type RunRow = Pick<
   Database["public"]["Tables"]["checklist_runs"]["Row"],
@@ -185,7 +185,7 @@ export function Dashboard() {
     refetchOnWindowFocus: false,
   });
 
-  const runs = runsQuery.data ?? [];
+  const runs = useMemo(() => runsQuery.data ?? [], [runsQuery.data]);
   const templateMap = useMemo(() => {
     const m = new Map<string, ProductType>();
     for (const t of templatesQuery.data ?? []) {

@@ -14,14 +14,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DynamicForm } from "@/components/form/DynamicForm";
 import {
-  DynamicForm,
   buildInitialValues,
   isSpecialKey,
   specialFieldKey,
   type DynamicFormHandle,
   type RunFormValues,
-} from "@/components/form/DynamicForm";
+} from "@/components/form/dynamic-form-meta";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
 import { useAuth } from "@/contexts/AuthContext";
@@ -404,8 +404,5 @@ export function ChecklistEdit() {
 }
 
 const SPECIAL_KEYS = ["batch_number", "production_date"] as const;
-
-// Referência a specialFieldKey para garantir que a função não seja
-// tree-shaken sem uso: na verdade a função é útil aqui, mas para evitar
-// TS6133 em alguns casos, criamos uma referência explícita.
-export { specialFieldKey as _unused_specialFieldKey_edit };
+void SPECIAL_KEYS;
+void specialFieldKey;

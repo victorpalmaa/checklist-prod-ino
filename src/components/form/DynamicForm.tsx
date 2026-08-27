@@ -3,9 +3,8 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
-  type ReactNode,
 } from "react";
-import { useForm, useWatch, type Control, type FieldValues, type UseFormReturn } from "react-hook-form";
+import { useForm, useWatch, type Control } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,122 +13,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FieldRenderer } from "@/components/form/FieldRenderer";
+import { extractFieldsByKey } from "@/types/form";
 import {
-  type TemplateSnapshot,
-  extractFieldsByKey,
-  type SnapshotField,
-  type SnapshotSection,
-} from "@/types/form";
-import type { Tables } from "@/types/database";
-
-export const SPECIAL_FIELD_KEYS = ["batch_number", "production_date"] as const;
-export type SpecialFieldKey = (typeof SPECIAL_FIELD_KEYS)[number];
-
-export type RunFormValues = FieldValues & {
-  special: {
-    batch_number: string | null;
-    production_date: string | null;
-  };
-  sections: Record<
-    string,
-    Record<string, string | number | boolean | null | undefined>
-  >;
-};
-
-export function sectionFieldKey(sectionKey: string, fieldKey: string) {
-  return `sections.${sectionKey}.${fieldKey}`;
-}
-
-export function specialFieldKey(fieldKey: SpecialFieldKey) {
-  return `special.${fieldKey}`;
-}
-
-export function isSpecialKey(key: string): key is SpecialFieldKey {
-  return SPECIAL_FIELD_KEYS.includes(key as SpecialFieldKey);
-}
-
-export function buildInitialValues(
-  snapshot: TemplateSnapshot,
-  run: Tables<"checklist_runs">,
-  runValues: Tables<"run_values">[],
-): RunFormValues {
-  const initial: RunFormValues = {
-    special: {
-      batch_number: run.batch_number ?? null,
-      production_date: run.production_date ?? null,
-    },
-    sections: {},
-  };
-
-  for (const section of snapshot.sections) {
-    const sectionBucket: Record<string, string | number | boolean | null | undefined> = {};
-    for (const field of section.fields) {
-      sectionBucket[field.key] = null;
-    }
-    initial.sections[section.key] = sectionBucket;
-  }
-
-  for (const value of runValues) {
-    const sec = initial.sections[value.section_key];
-    if (!sec) continue;
-    if (!(value.field_key in sec)) continue;
-
-    const fMeta = (() => {
-      const targetSection = snapshot.sections.find((s) => s.key === value.section_key);
-      return targetSection?.fields.find((f) => f.key === value.field_key);
-    })();
-    const ftype = fMeta?.field_type ?? "text";
-
-    if (ftype === "number" || ftype === "computed_avg") {
-      sec[value.field_key] = value.value_num ?? null;
-    } else if (ftype === "checkbox") {
-      sec[value.field_key] = value.value_bool ?? null;
-    } else if (ftype === "date") {
-      sec[value.field_key] = value.value_date ?? null;
-    } else {
-      sec[value.field_key] = value.value_text ?? null;
-    }
-  }
-
-  return initial;
-}
-
-function sortedSections(snapshot: TemplateSnapshot): SnapshotSection[] {
-  return [...snapshot.sections].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
-}
-
-function sortedFields(section: SnapshotSection): SnapshotField[] {
-  return [...section.fields].sort((a, b) => a.sort_order - b.sort_order);
-}
-
-function isFieldVisible(
-  field: SnapshotField,
-  sectionKey: string,
-  sectionsData: Record<string, Record<string, string | number | boolean | null | undefined>>,
-): boolean {
-  if (!field.visible_if) return true;
-  const sectionBucket = sectionsData[sectionKey] ?? {};
-  const currentValue = sectionBucket[field.visible_if.field];
-  return currentValue === field.visible_if.equals;
-}
-
-export interface DynamicFormHandle {
-  getValues: () => RunFormValues;
-  submit: () => Promise<RunFormValues | null>;
-}
-
-export interface DynamicFormProps {
-  snapshot: TemplateSnapshot;
-  initial: RunFormValues;
-  readOnly?: boolean;
-  onSubmit: (
-    values: RunFormValues,
-    form: UseFormReturn<RunFormValues>,
-  ) => Promise<void> | void;
-  actions?: ReactNode;
-}
+  SPECIAL_FIELD_KEYS,
+  type SpecialFieldKey,
+  type RunFormValues,
+  sectionFieldKey,
+  specialFieldKey,
+  isSpecialKey,
+  type DynamicFormHandle,
+  type DynamicFormProps,
+  sortedSections,
+  sortedFields,
+  isFieldVisible,
+} from "./dynamic-form-meta";
 
 export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
   function DynamicForm(
@@ -162,6 +59,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
 
   const fieldsByKeyMap = useMemo(() => extractFieldsByKey(snapshot), [snapshot]);
   const sections = useMemo(() => sortedSections(snapshot), [snapshot]);
+  void SPECIAL_FIELD_KEYS;
 
   const watchedSections = useWatch({
     control: form.control,
@@ -245,7 +143,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
                       key={field.key}
                       field={field}
                       sectionKey={section.key}
-                      fullKey={specialFieldKey(field.key)}
+                      fullKey={specialFieldKey(field.key as SpecialFieldKey)}
                       control={form.control as Control<RunFormValues>}
                       disabled={readOnly}
                     />
