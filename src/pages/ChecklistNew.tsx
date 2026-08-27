@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -8,7 +8,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -46,7 +52,15 @@ const createRunSchema = z.object({
     .string({ required_error: "Informe a data prevista de produção" })
     .min(1, "Informe a data prevista de produção")
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido"),
-  accompaniment_reason: z.string().nullish(),
+  accompaniment_reason: z
+    .enum([
+      "Teste piloto",
+      "Primeira produção",
+      "Intercorrência de produção",
+      "Alteração de fórmula",
+      "Validação processo",
+    ])
+    .nullish(),
 });
 
 type CreateRunForm = z.infer<typeof createRunSchema>;
@@ -60,6 +74,7 @@ export function ChecklistNew() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<CreateRunForm>({
     resolver: zodResolver(createRunSchema),
@@ -68,7 +83,7 @@ export function ChecklistNew() {
       client: "",
       formulation_code: "",
       production_date: "",
-      accompaniment_reason: "",
+      accompaniment_reason: undefined,
     },
   });
 
@@ -232,10 +247,32 @@ export function ChecklistNew() {
           <Label htmlFor="accompaniment_reason" className="text-sm font-medium text-[var(--color-fg)]">
             Motivo do Acompanhamento
           </Label>
-          <Textarea
-            id="accompaniment_reason"
-            aria-invalid={!!errors.accompaniment_reason}
-            {...register("accompaniment_reason")}
+          <Controller
+            control={control}
+            name="accompaniment_reason"
+            render={({ field }) => (
+              <Select
+                value={field.value ?? undefined}
+                onValueChange={(v) => {
+                  field.onChange(v);
+                  field.onBlur();
+                }}
+              >
+                <SelectTrigger
+                  id="accompaniment_reason"
+                  aria-invalid={!!errors.accompaniment_reason}
+                >
+                  <SelectValue placeholder="Selecione uma opção (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Teste piloto">Teste piloto</SelectItem>
+                  <SelectItem value="Primeira produção">Primeira produção</SelectItem>
+                  <SelectItem value="Intercorrência de produção">Intercorrência de produção</SelectItem>
+                  <SelectItem value="Alteração de fórmula">Alteração de fórmula</SelectItem>
+                  <SelectItem value="Validação processo">Validação processo</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           />
         </div>
 
