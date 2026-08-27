@@ -20,6 +20,12 @@ const snapshotFieldSchema = z
     computed_from: z.array(z.string()).nullish(),
     help_text: z.string().nullish(),
     sort_order: z.number(),
+    visible_if: z
+      .object({
+        field: z.string(),
+        equals: z.union([z.string(), z.boolean()]),
+      })
+      .nullish(),
   })
   .passthrough();
 

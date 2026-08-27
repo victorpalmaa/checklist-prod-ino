@@ -104,6 +104,17 @@ function sortedFields(section: SnapshotSection): SnapshotField[] {
   return [...section.fields].sort((a, b) => a.sort_order - b.sort_order);
 }
 
+function isFieldVisible(
+  field: SnapshotField,
+  sectionKey: string,
+  sectionsData: Record<string, Record<string, string | number | boolean | null | undefined>>,
+): boolean {
+  if (!field.visible_if) return true;
+  const sectionBucket = sectionsData[sectionKey] ?? {};
+  const currentValue = sectionBucket[field.visible_if.field];
+  return currentValue === field.visible_if.equals;
+}
+
 export interface DynamicFormHandle {
   getValues: () => RunFormValues;
   submit: () => Promise<RunFormValues | null>;
@@ -149,7 +160,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
       [form],
     );
 
-  const { fieldsByKey } = useMemo(() => extractFieldsByKey(snapshot), [snapshot]);
+  const fieldsByKeyMap = useMemo(() => extractFieldsByKey(snapshot), [snapshot]);
   const sections = useMemo(() => sortedSections(snapshot), [snapshot]);
 
   const watchedSections = useWatch({
@@ -160,14 +171,19 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
 
   useEffect(() => {
     if (readOnly) return;
+    const allSectionsData = form.getValues("sections") ?? {};
     for (const section of sections) {
       for (const field of section.fields) {
         if (field.field_type !== "computed_avg") continue;
+        if (!isFieldVisible(field, section.key, allSectionsData)) continue;
         const srcKeys = field.computed_from ?? [];
         if (srcKeys.length === 0) continue;
         const sectionBucket = form.getValues(`sections.${section.key}`) ?? {};
+        const { fieldsByKey: fb } = fieldsByKeyMap;
         const nums: number[] = [];
         for (const k of srcKeys) {
+          const srcField = fb.get(k);
+          if (srcField && !isFieldVisible(srcField, section.key, allSectionsData)) continue;
           const raw = sectionBucket[k];
           if (typeof raw === "number" && !Number.isNaN(raw)) {
             nums.push(raw);
@@ -202,7 +218,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
         });
       }
     }
-  }, [watchedSections, sections, form, readOnly]);
+  }, [watchedSections, sections, form, readOnly, fieldsByKeyMap]);
 
   return (
     <form
@@ -222,6 +238,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {fields.map((field) => {
+                if (!isFieldVisible(field, section.key, watchedSections ?? {})) return null;
                 if (isSpecialKey(field.key)) {
                   return (
                     <FieldRenderer<RunFormValues>
@@ -262,8 +279,8 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
           </Button>
         ) : null}
       </div>
-      {/* fieldsByKey: utilizado via type + memo; tree-shake não o corte no build */}
-      <span className="sr-only" data-fields-count={fieldsByKey.size} />
+      {/* fieldsByKeyMap: utilizado via type + memo; tree-shake não o corte no build */}
+      <span className="sr-only" data-fields-count={fieldsByKeyMap.fieldsByKey.size} />
     </form>
   );
   },
