@@ -20,7 +20,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
-import type { ProductType, RunStatus } from "@/types/form";
+import type { RunStatus } from "@/types/form";
+import { PRODUCT_TYPE_LABEL } from "@/lib/products";
+import type { ProductType } from "@/lib/products";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -45,12 +47,6 @@ type TemplateRow = Pick<
   Database["public"]["Tables"]["form_templates"]["Row"],
   "id" | "product_type"
 >;
-
-const PRODUCT_TYPE_LABEL: Record<ProductType, string> = {
-  po: "Pó",
-  gel: "Gel",
-  capsula: "Cápsula",
-};
 
 const STATUS_CHART_FILL: Record<RunStatus, string> = {
   draft: "var(--color-fg-muted)",
