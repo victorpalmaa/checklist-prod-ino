@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -18,7 +19,9 @@ import { ChecklistDetail } from "@/pages/ChecklistDetail";
 import { ChecklistEdit } from "@/pages/ChecklistEdit";
 import { AdminTemplates } from "@/pages/AdminTemplates";
 import { AdminTemplateDetail } from "@/pages/AdminTemplateDetail";
-import { Dashboard } from "@/pages/Dashboard";
+const Dashboard = lazy(() =>
+  import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+);
 import { AuditLog } from "@/pages/AuditLog";
 import { AdminUsers } from "@/pages/AdminUsers";
 import { NotFound } from "@/pages/NotFound";
@@ -70,7 +73,22 @@ export function AppRouter() {
               path="/admin/templates/:id"
               element={<AdminTemplateDetail />}
             />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route
+              path="/dashboard"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-[40vh] items-center justify-center">
+                      <span className="text-caption text-[var(--color-fg-muted)]">
+                        Carregando...
+                      </span>
+                    </div>
+                  }
+                >
+                  <Dashboard />
+                </Suspense>
+              }
+            />
             <Route path="/auditoria" element={<AuditLog />} />
             <Route path="/admin/usuarios" element={<AdminUsers />} />
             <Route path="*" element={<NotFound />} />
