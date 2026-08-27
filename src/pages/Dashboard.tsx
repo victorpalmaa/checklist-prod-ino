@@ -95,6 +95,22 @@ function weekLabel(date: Date): string {
     .padStart(2, "0")}`;
 }
 
+function monthKey(date: Date): string {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(date: Date): string {
+  const d = new Date(date);
+  const shortMonths = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+  ];
+  const month = shortMonths[d.getMonth()];
+  const year = String(d.getFullYear()).slice(-2);
+  return `${month}/${year}`;
+}
+
 interface FormToggle {
   incluirTeste: boolean;
 }
@@ -232,6 +248,25 @@ export function Dashboard() {
       fill: PRODUCT_CHART_COLORS[pt],
     }));
   }, [runs, templateMap]);
+
+  const monthlyData = useMemo(() => {
+    const buckets: Record<string, { key: string; label: string; count: number }> =
+      {};
+    const today = new Date();
+    const months: Date[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const k = monthKey(d);
+      buckets[k] = { key: k, label: monthLabel(d), count: 0 };
+      months.push(d);
+    }
+    for (const r of runs) {
+      const d = new Date(r.created_at);
+      const k = monthKey(d);
+      if (buckets[k]) buckets[k].count += 1;
+    }
+    return months.map((m) => buckets[monthKey(m)]);
+  }, [runs]);
 
   const avgCompletionDays = useMemo(() => {
     let totalMs = 0;
@@ -515,6 +550,64 @@ export function Dashboard() {
                     </p>
                   </>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Registros por mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={monthlyData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--color-border)"
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--color-surface-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "10px",
+                        color: "var(--color-fg)",
+                        fontSize: 13,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="var(--color-brand)"
+                      strokeWidth={2}
+                      dot={{
+                        fill: "var(--color-brand)",
+                        strokeWidth: 0,
+                        r: 4,
+                      }}
+                      activeDot={{
+                        fill: "var(--color-brand)",
+                        strokeWidth: 0,
+                        r: 6,
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
