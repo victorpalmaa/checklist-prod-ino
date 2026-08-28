@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { ShieldAlert, ArrowLeft, Upload, Trash2, Eye } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Upload, Trash2, Eye, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
@@ -20,6 +20,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { FieldEditorDialog } from "@/components/admin/FieldEditorDialog";
+import type { VisibleIfCandidate } from "@/components/admin/FieldEditorDialog";
+import { useTemplateEditor } from "@/components/admin/useTemplateEditor";
+import {
+  canBeVisibleIfSource,
+  emptyFieldDraft,
+  nextSortOrder,
+  slugifyKey,
+} from "@/components/admin/template-editor-meta";
+import type { FieldDraft } from "@/components/admin/template-editor-meta";
 
 type TemplateRow = Database["public"]["Tables"]["form_templates"]["Row"];
 type SectionRow = Database["public"]["Tables"]["form_sections"]["Row"];
@@ -104,6 +115,21 @@ export function AdminTemplateDetail() {
   const isAdmin = auth.profile?.role === "admin";
   const [publishOpen, setPublishOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [newSectionOpen, setNewSectionOpen] = useState(false);
+  const [newSectionTitle, setNewSectionTitle] = useState("");
+  const [deleteSectionId, setDeleteSectionId] = useState<string | null>(null);
+  const [deleteFieldId, setDeleteFieldId] = useState<string | null>(null);
+  // nonce e um contador puro, nao Date.now(): serve so para forcar uma
+  // key nova a cada abertura do editor, remontando o dialogo para que o
+  // estado interno nasca de `initial` sem useEffect de sincronizacao.
+  const [editorNonce, setEditorNonce] = useState(0);
+  const [editorState, setEditorState] = useState<{
+    sectionId: string;
+    fieldId: string | null;
+    initial: FieldDraft;
+    nonce: number;
+  } | null>(null);
+  const editor = useTemplateEditor(templateId);
 
   const detailQuery = useQuery({
     queryKey: ["admin-template-detail", templateId] as const,
@@ -208,6 +234,39 @@ export function AdminTemplateDetail() {
     },
   });
 
+  const openNewField = (
+    sectionId: string,
+    existingOrders: readonly number[],
+  ) => {
+    setEditorState({
+      sectionId,
+      fieldId: null,
+      initial: emptyFieldDraft(nextSortOrder(existingOrders)),
+      nonce: editorNonce,
+    });
+    setEditorNonce((n) => n + 1);
+  };
+
+  const openEditField = (sectionId: string, field: FieldRow) => {
+    setEditorState({
+      sectionId,
+      fieldId: field.id,
+      initial: {
+        key: field.key,
+        label: field.label,
+        field_type: field.field_type,
+        unit: field.unit ?? "",
+        required: field.required,
+        help_text: field.help_text ?? "",
+        sort_order: field.sort_order,
+        options: parseStringArray(field.options),
+        visible_if: parseVisibleIf(field.visible_if),
+      },
+      nonce: editorNonce,
+    });
+    setEditorNonce((n) => n + 1);
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-tint)] p-8 text-center">
@@ -296,6 +355,17 @@ export function AdminTemplateDetail() {
               <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Descartar rascunho
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setNewSectionTitle("");
+                setNewSectionOpen(true);
+              }}
+              disabled={busy || editor.busy}
+            >
+              <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+              Nova seção
+            </Button>
             <Button onClick={() => setPublishOpen(true)} disabled={isEmpty || busy}>
               <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
               Publicar
@@ -338,6 +408,31 @@ export function AdminTemplateDetail() {
             <span className="text-caption text-[var(--color-fg-muted)]">
               {section.key} · {section.fields.length} campos
             </span>
+            {isDraft && (
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    openNewField(
+                      section.id,
+                      section.fields.map((f) => f.sort_order),
+                    )
+                  }
+                  disabled={editor.busy}
+                >
+                  <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Campo
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setDeleteSectionId(section.id)}
+                  disabled={editor.busy}
+                  aria-label={`Excluir seção ${section.title}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
           </header>
 
           {section.fields.length === 0 ? (
@@ -396,6 +491,26 @@ export function AdminTemplateDetail() {
                         {field.help_text}
                       </p>
                     )}
+                    {isDraft && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          onClick={() => openEditField(section.id, field)}
+                          disabled={editor.busy}
+                        >
+                          <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setDeleteFieldId(field.id)}
+                          disabled={editor.busy}
+                          aria-label={`Excluir campo ${field.label}`}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -403,6 +518,192 @@ export function AdminTemplateDetail() {
           )}
         </section>
       ))}
+
+      {editorState && (
+        <FieldEditorDialog
+          key={`${editorState.fieldId ?? "new"}-${editorState.nonce}`}
+          open={true}
+          onOpenChange={(o) => {
+            if (!o) setEditorState(null);
+          }}
+          initial={editorState.initial}
+          isNew={editorState.fieldId === null}
+          existingKeys={(
+            sections.find((sec) => sec.id === editorState.sectionId)?.fields ??
+            []
+          )
+            .filter((f) => f.id !== editorState.fieldId)
+            .map((f) => f.key)}
+          visibleIfCandidates={(
+            sections.find((sec) => sec.id === editorState.sectionId)?.fields ??
+            []
+          )
+            .filter(
+              (f) =>
+                canBeVisibleIfSource(f.field_type) &&
+                f.id !== editorState.fieldId,
+            )
+            .map(
+              (f): VisibleIfCandidate => ({
+                key: f.key,
+                label: f.label,
+                options: parseStringArray(f.options),
+              }),
+            )}
+          saving={editor.saveField.isPending}
+          onSave={(draft) => {
+            editor.saveField.mutate(
+              {
+                sectionId: editorState.sectionId,
+                fieldId: editorState.fieldId,
+                draft,
+              },
+              { onSuccess: () => setEditorState(null) },
+            );
+          }}
+        />
+      )}
+
+      <AlertDialog open={newSectionOpen} onOpenChange={setNewSectionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nova seção</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <span className="block">
+                A chave técnica é gerada a partir do título.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1">
+            <Input
+              value={newSectionTitle}
+              onChange={(e) => setNewSectionTitle(e.target.value)}
+              placeholder="Processo de Mistura"
+              aria-label="Título da seção"
+            />
+            <p className="text-caption text-[var(--color-fg-muted)]">
+              {newSectionTitle.trim()
+                ? slugifyKey(newSectionTitle)
+                : "chave_gerada_do_titulo"}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={editor.createSection.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                const title = newSectionTitle.trim();
+                const key = slugifyKey(title);
+                if (!title || !key) return;
+                editor.createSection.mutate(
+                  {
+                    key,
+                    title,
+                    sort_order: nextSortOrder(
+                      sections.map((sec) => sec.sort_order),
+                    ),
+                  },
+                  { onSuccess: () => setNewSectionOpen(false) },
+                );
+              }}
+              disabled={
+                editor.createSection.isPending || !newSectionTitle.trim()
+              }
+            >
+              {editor.createSection.isPending ? "Criando…" : "Criar seção"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteSectionId !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteSectionId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta seção?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <span className="block">
+                Todos os campos dentro dela também serão excluídos.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={editor.deleteSection.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (!deleteSectionId) return;
+                editor.deleteSection.mutate(deleteSectionId, {
+                  onSuccess: () => setDeleteSectionId(null),
+                });
+              }}
+              disabled={editor.deleteSection.isPending}
+            >
+              {editor.deleteSection.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteFieldId !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteFieldId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este campo?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <span className="block">
+                {(() => {
+                  const target = sections
+                    .flatMap((sec) => sec.fields)
+                    .find((f) => f.id === deleteFieldId);
+                  if (!target) return "Esta ação não pode ser desfeita.";
+                  const dependents = sections
+                    .flatMap((sec) => sec.fields)
+                    .filter(
+                      (f) =>
+                        parseVisibleIf(f.visible_if)?.field === target.key,
+                    );
+                  if (dependents.length === 0) {
+                    return "Esta ação não pode ser desfeita.";
+                  }
+                  return `Atenção: ${dependents
+                    .map((d) => d.label)
+                    .join(", ")} depende deste campo para aparecer e ficará invisível.`;
+                })()}
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={editor.deleteField.isPending}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (!deleteFieldId) return;
+                editor.deleteField.mutate(deleteFieldId, {
+                  onSuccess: () => setDeleteFieldId(null),
+                });
+              }}
+              disabled={editor.deleteField.isPending}
+            >
+              {editor.deleteField.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={publishOpen} onOpenChange={setPublishOpen}>
         <AlertDialogContent>
