@@ -29,13 +29,21 @@ import {
 } from "@/components/signatures/signatureMeta";
 import type { Database } from "@/types/database";
 
-type AllowedProductType = "po" | "gel";
+// Tipos com template publicado no banco. Goma nao existe no enum
+// product_type do Postgres: liberar aqui faria create_run falhar com
+// erro de enum invalido.
+type AllowedProductType = "po" | "gel" | "capsula";
 
-const ALLOWED_TYPES: readonly AllowedProductType[] = ["po", "gel"] as const;
+const ALLOWED_TYPES: readonly AllowedProductType[] = [
+  "po",
+  "gel",
+  "capsula",
+] as const;
 
 const TYPE_LABEL: Record<AllowedProductType, string> = {
   po: "Pó",
   gel: "Gel",
+  capsula: "Cápsula",
 };
 
 const createRunSchema = z.object({

@@ -9,7 +9,7 @@ const OPTIONS: {
 }[] = [
   { slug: "po", label: "Pó", available: true },
   { slug: "gel", label: "Gel", available: true },
-  { slug: "capsula", label: "Cápsula", available: false },
+  { slug: "capsula", label: "Cápsula", available: true },
   { slug: "goma", label: "Goma", available: false },
 ];
 
@@ -29,8 +29,13 @@ export function ChecklistTypeSelect() {
         {OPTIONS.map((opt) => (
           <Card
             key={opt.slug}
-            className="min-h-[140px] cursor-pointer border transition-colors duration-150"
-            onClick={() => navigate(`/checklists/novo/${opt.slug}`)}
+            className={`min-h-[140px] border transition-colors duration-150 ${
+              opt.available ? "cursor-pointer" : "cursor-not-allowed opacity-70"
+            }`}
+            onClick={() => {
+              if (!opt.available) return;
+              navigate(`/checklists/novo/${opt.slug}`);
+            }}
           >
             <CardContent className="flex min-h-[140px] flex-col items-start justify-between p-5">
               <h2 className="text-heading text-[var(--color-fg)]">
