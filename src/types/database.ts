@@ -150,6 +150,7 @@ export type Database = {
           computed_from: Json | null;
           help_text: string | null;
           sort_order: number;
+          visible_if: Json | null;
         };
         Insert: {
           id?: string;
@@ -164,6 +165,7 @@ export type Database = {
           computed_from?: Json | null;
           help_text?: string | null;
           sort_order: number;
+          visible_if?: Json | null;
         };
         Update: {
           id?: string;
@@ -178,6 +180,7 @@ export type Database = {
           computed_from?: Json | null;
           help_text?: string | null;
           sort_order?: number;
+          visible_if?: Json | null;
         };
         Relationships: [
           {

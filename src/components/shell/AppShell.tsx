@@ -155,7 +155,7 @@ export function AppShell({ children, className }: AppShellProps) {
             <span className="text-eyebrow">Sistema</span>
           </div>
           <p className="text-caption">
-            RED-029 Rev. 06 — Checklist de produção
+            RED-029 — Checklist de produção
           </p>
         </div>
       </aside>
