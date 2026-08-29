@@ -140,6 +140,39 @@ export async function signedUrlFor(
   return data?.signedUrl ?? null;
 }
 
+export type ResolvedAttachment = {
+  sectionKey: string;
+  url: string;
+  fileName: string;
+};
+
+/**
+ * Resolve as signed URLs de todos os anexos de um run, para uso no PDF.
+ * @react-pdf/renderer nao faz chamada assincrona durante a renderizacao,
+ * entao as URLs precisam chegar prontas. Elas expiram em 1h, tempo de
+ * sobra para a geracao do documento, que leva segundos.
+ *
+ * Anexos cuja URL falhar sao omitidos: um PDF sem uma foto e melhor que
+ * um PDF que nao gera.
+ */
+export async function resolveAttachmentsForPdf(
+  runId: string,
+): Promise<ResolvedAttachment[]> {
+  const rows = await listAttachments(runId);
+  const resolved = await Promise.all(
+    rows.map(async (r) => {
+      const url = await signedUrlFor(r.storage_path, 3600);
+      if (!url || !r.section_key) return null;
+      return {
+        sectionKey: r.section_key,
+        url,
+        fileName: r.file_name,
+      } satisfies ResolvedAttachment;
+    }),
+  );
+  return resolved.filter((r): r is ResolvedAttachment => r !== null);
+}
+
 export async function listAttachments(
   runId: string,
 ): Promise<AttachmentRow[]> {

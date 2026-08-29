@@ -12,6 +12,7 @@ import type {
   SnapshotSection,
 } from "@/types/form";
 import type { Tables } from "@/types/database";
+import type { ResolvedAttachment } from "@/lib/attachments";
 import { SIGNATURE_ROLE_LABEL } from "@/components/signatures/signatureMeta";
 import type { SignatureRole } from "@/components/signatures/signatureMeta";
 import { isFieldVisible } from "@/lib/form/visibility";
@@ -160,6 +161,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: BRAND.identity,
     marginBottom: 10,
+  },
+  evidenceBlock: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: BRAND.border,
+  },
+  evidenceTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: BRAND.textSecondary,
+    marginBottom: 8,
+  },
+  evidenceItem: {
+    marginBottom: 10,
+  },
+  evidenceImage: {
+    width: 240,
+    objectFit: "contain",
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    borderRadius: 6,
+  },
+  evidenceCaption: {
+    fontSize: 8,
+    color: BRAND.textMuted,
+    marginTop: 3,
   },
   fieldRow: {
     flexDirection: "row",
@@ -380,6 +408,9 @@ export interface ChecklistPdfDocumentProps {
   snapshot: TemplateSnapshot;
   values: Tables<"run_values">[];
   signatures: SignatureData[];
+  /** Signed URLs ja resolvidas pelo chamador: o renderer nao faz
+   * chamada assincrona durante a renderizacao. */
+  attachments?: ResolvedAttachment[];
 }
 
 export function ChecklistPdfDocument({
@@ -387,6 +418,7 @@ export function ChecklistPdfDocument({
   snapshot,
   values,
   signatures,
+  attachments,
 }: ChecklistPdfDocumentProps) {
   const valuesByKey = new Map<string, Tables<"run_values">>();
   for (const rv of values) {
@@ -487,7 +519,12 @@ export function ChecklistPdfDocument({
           const visibleFields = sortedFields.filter((f) =>
             isFieldVisible(f, sec.key, sectionsData),
           );
-          if (visibleFields.length === 0) return null;
+          const secAttachments = (attachments ?? []).filter(
+            (a) => a.sectionKey === sec.key,
+          );
+          if (visibleFields.length === 0 && secAttachments.length === 0) {
+            return null;
+          }
           return (
             <View key={sec.key} style={styles.section}>
               <Text style={styles.sectionTitle}>{sec.title}</Text>
@@ -504,6 +541,19 @@ export function ChecklistPdfDocument({
                   </Text>
                 </View>
               ))}
+              {secAttachments.length > 0 ? (
+                <View style={styles.evidenceBlock}>
+                  <Text style={styles.evidenceTitle}>
+                    Evidências fotográficas
+                  </Text>
+                  {secAttachments.map((att, i) => (
+                    <View key={`${sec.key}-${i}`} style={styles.evidenceItem} wrap={false}>
+                      <Image src={att.url} style={styles.evidenceImage} />
+                      <Text style={styles.evidenceCaption}>{att.fileName}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
           );
         })}

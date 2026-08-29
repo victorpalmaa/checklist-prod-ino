@@ -108,17 +108,21 @@ export function ChecklistDetail() {
     }
     setPdfLoading(true);
     try {
-      const [{ pdf }, { ChecklistPdfDocument }] = await Promise.all([
-        import("@react-pdf/renderer"),
-        import("@/lib/pdf/ChecklistPdfDocument"),
-      ]);
+      const [{ pdf }, { ChecklistPdfDocument }, { resolveAttachmentsForPdf }] =
+        await Promise.all([
+          import("@react-pdf/renderer"),
+          import("@/lib/pdf/ChecklistPdfDocument"),
+          import("@/lib/attachments"),
+        ]);
       const run = runQuery.data;
+      const pdfAttachments = await resolveAttachmentsForPdf(run.id);
       const blob = await pdf(
         <ChecklistPdfDocument
           run={run}
           snapshot={snapshotLocal}
           values={valuesQuery.data}
           signatures={signaturesQuery.data}
+          attachments={pdfAttachments}
         />,
       ).toBlob();
       const url = URL.createObjectURL(blob);
