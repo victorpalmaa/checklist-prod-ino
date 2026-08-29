@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { RunStatusBadge } from "@/components/status/RunStatus";
 import type { RunStatusValue } from "@/components/status/run-status-meta";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { SignaturePanel } from "@/components/signatures/SignaturePanel";
 import {
   CHECKLIST_SIGNATURES_QUERY_KEY,
@@ -525,6 +526,12 @@ export function ChecklistDetail() {
         );
       })}
 
+      <AttachmentsPanel
+        runId={run.id}
+        snapshot={snapshot}
+        canEdit={false}
+        currentUserId={auth.profile?.id ?? null}
+      />
       <SignaturePanel
         runId={id}
         runStatus={status as RunStatusValue}

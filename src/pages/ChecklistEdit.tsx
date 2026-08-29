@@ -14,6 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import {
   buildInitialValues,
@@ -368,6 +369,14 @@ export function ChecklistEdit() {
               ) : null}
             </>
           }
+        />
+        <AttachmentsPanel
+          runId={run.id}
+          snapshot={snapshot}
+          canEdit={
+            run.status === "draft" && run.created_by === (auth.user?.id ?? "")
+          }
+          currentUserId={auth.user?.id ?? null}
         />
       </div>
 
