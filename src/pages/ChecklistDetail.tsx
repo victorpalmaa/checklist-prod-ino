@@ -10,6 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { RunStatusBadge } from "@/components/status/RunStatus";
 import type { RunStatusValue } from "@/components/status/run-status-meta";
 import { SignaturePanel } from "@/components/signatures/SignaturePanel";
@@ -17,6 +28,7 @@ import {
   CHECKLIST_SIGNATURES_QUERY_KEY,
   type SignatureRow,
 } from "@/components/signatures/signature-panel-meta";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
 import { parseSnapshot, type RunStatus } from "@/types/form";
@@ -79,6 +91,10 @@ export function ChecklistDetail() {
   const { id } = useParams() as { id: string };
   const navigate = useNavigate();
   const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+  const auth = useAuth();
+  const [correctOpen, setCorrectOpen] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   async function handleDownloadPdf() {
     if (!runQuery.data || !valuesQuery.data || !signaturesQuery.data) return;
@@ -176,6 +192,44 @@ export function ChecklistDetail() {
     refetchOnWindowFocus: false,
   });
 
+  // Cadeia de correcao. Um run pode apontar para o que ele corrige
+  // (supersedes_run_id) e ser apontado por quem o corrigiu. As duas
+  // pontas sao lidas aqui para montar a navegacao entre versoes.
+  const chainQuery = useQuery({
+    queryKey: ["checklist-detail", "chain", id] as const,
+    enabled: !!id && !!runQuery.data,
+    queryFn: async () => {
+      const supersededId = runQuery.data?.supersedes_run_id ?? null;
+
+      const { data: successor, error: sErr } = await supabase
+        .from("checklist_runs")
+        .select("id, created_at, status")
+        .eq("supersedes_run_id", id as string)
+        .maybeSingle();
+      if (sErr) throw sErr;
+
+      let predecessor: {
+        id: string;
+        created_at: string;
+        status: string;
+      } | null = null;
+      if (supersededId) {
+        const { data: pred, error: pErr } = await supabase
+          .from("checklist_runs")
+          .select("id, created_at, status")
+          .eq("id", supersededId)
+          .maybeSingle();
+        if (pErr) throw pErr;
+        predecessor = pred ?? null;
+      }
+
+      return { successor: successor ?? null, predecessor };
+    },
+    staleTime: 30_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
   const isLoading =
     runQuery.isLoading || valuesQuery.isLoading || signaturesQuery.isLoading;
   const loadError = runQuery.error || valuesQuery.error || signaturesQuery.error;
@@ -257,8 +311,89 @@ export function ChecklistDetail() {
   );
   const status = (run.status ?? "draft") as RunStatus;
 
+  const successor = chainQuery.data?.successor ?? null;
+  const predecessor = chainQuery.data?.predecessor ?? null;
+
+  // O front replica as condicoes da RPC apenas para esconder o botao.
+  // A autorizacao real e a validacao de 20 caracteres vivem em
+  // void_and_supersede_run; forcar a chamada nao contorna nada.
+  const canCorrect =
+    status === "signed" &&
+    !successor &&
+    !!auth.profile &&
+    (auth.profile.role === "admin" || run.created_by === auth.profile.id);
+
+  const reasonTrimmed = correctionReason.trim();
+
+  const submitCorrection = async () => {
+    if (reasonTrimmed.length < 20) return;
+    setCorrecting(true);
+    try {
+      const { data: newId, error } = await supabase.rpc(
+        "void_and_supersede_run",
+        { p_run_id: run.id, p_reason: reasonTrimmed },
+      );
+      if (error) throw error;
+      if (!newId) throw new Error("RPC não retornou o id da correção.");
+      toast.success("Correção emitida.");
+      setCorrectOpen(false);
+      navigate(`/checklists/${newId}/editar`);
+    } catch (err) {
+      toast.error(mapSupabaseError(err));
+    } finally {
+      setCorrecting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
+      {successor ? (
+        <div
+          className="rounded-[var(--radius-lg)] border px-4 py-3"
+          style={{
+            borderColor: "var(--color-danger-border)",
+            backgroundColor: "var(--color-danger-tint)",
+            color: "var(--color-danger-text)",
+          }}
+        >
+          <p className="text-body">
+            Este registro foi cancelado e substituído por uma correção.
+          </p>
+          {run.voided_reason ? (
+            <p className="text-caption mt-1">
+              Justificativa: {run.voided_reason}
+            </p>
+          ) : null}
+          <Link
+            to={`/checklists/${successor.id}`}
+            className="text-caption mt-2 inline-block underline"
+          >
+            Ver o registro que o substitui
+          </Link>
+        </div>
+      ) : null}
+
+      {predecessor ? (
+        <div
+          className="rounded-[var(--radius-lg)] border px-4 py-3"
+          style={{
+            borderColor: "var(--color-primary-border)",
+            backgroundColor: "var(--color-primary-tint)",
+            color: "var(--color-primary-text)",
+          }}
+        >
+          <p className="text-body">
+            Este registro é uma correção de outro checklist.
+          </p>
+          <Link
+            to={`/checklists/${predecessor.id}`}
+            className="text-caption mt-2 inline-block underline"
+          >
+            Ver o registro original
+          </Link>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-display">{run.product_name}</h1>
@@ -344,6 +479,18 @@ export function ChecklistDetail() {
               Editar
             </Button>
           ) : null}
+          {canCorrect ? (
+            <Button
+              onClick={() => {
+                setCorrectionReason("");
+                setCorrectOpen(true);
+              }}
+              className="min-h-[44px]"
+              variant="outline"
+            >
+              Emitir correção
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -392,6 +539,57 @@ export function ChecklistDetail() {
           Voltar para listagem
         </Link>
       </div>
+
+      <AlertDialog open={correctOpen} onOpenChange={setCorrectOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Emitir correção deste registro?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <span className="block">
+                  Este registro será cancelado e um novo será criado em
+                  rascunho, com os mesmos valores, para você corrigir e
+                  coletar as assinaturas novamente.
+                </span>
+                <span className="block">
+                  O registro original permanece no sistema com a
+                  justificativa. Nada é excluído.
+                </span>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-1">
+            <Textarea
+              value={correctionReason}
+              onChange={(e) => setCorrectionReason(e.target.value)}
+              placeholder="Descreva o motivo da correção"
+              rows={4}
+              aria-label="Justificativa da correção"
+            />
+            <p className="text-caption text-[var(--color-fg-muted)]">
+              {reasonTrimmed.length < 20
+                ? `Mínimo de 20 caracteres. Faltam ${20 - reasonTrimmed.length}.`
+                : `${reasonTrimmed.length} caracteres.`}
+            </p>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={correcting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void submitCorrection();
+              }}
+              disabled={correcting || reasonTrimmed.length < 20}
+            >
+              {correcting ? "Emitindo…" : "Emitir correção"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
