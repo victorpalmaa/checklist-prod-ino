@@ -449,7 +449,7 @@ export function ChecklistDetail() {
             ) : null}
           </dl>
         </div>
-        <div className="flex items-start gap-2">
+        <div className="flex flex-wrap items-start justify-end gap-2">
           {run.accompaniment_reason ? (
             <div
               className="rounded-[10px] border px-4 py-2.5 text-[13px] leading-relaxed"
