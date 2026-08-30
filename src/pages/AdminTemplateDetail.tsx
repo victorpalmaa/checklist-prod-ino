@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { ShieldAlert, ArrowLeft, Upload, Trash2, Eye, Plus, Pencil } from "lucide-react";
+import {
+  ShieldAlert,
+  ArrowLeft,
+  Upload,
+  Trash2,
+  Eye,
+  Plus,
+  Pencil,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
@@ -25,6 +35,7 @@ import { FieldEditorDialog } from "@/components/admin/FieldEditorDialog";
 import type { VisibleIfCandidate } from "@/components/admin/FieldEditorDialog";
 import { useTemplateEditor } from "@/components/admin/useTemplateEditor";
 import {
+  canBeComputedSource,
   canBeVisibleIfSource,
   emptyFieldDraft,
   nextSortOrder,
@@ -234,6 +245,38 @@ export function AdminTemplateDetail() {
     },
   });
 
+  /**
+   * Move um item uma posicao para cima ou para baixo.
+   *
+   * A troca usa a posicao VISUAL, nao o sort_order bruto: nao ha
+   * constraint de unicidade nessa coluna, entao dois itens podem
+   * empatar. Quando isso acontece, escrever os valores cruzados nao
+   * mudaria a ordem — por isso o vizinho recebe um valor deslocado.
+   */
+  const moveItem = (
+    table: "form_sections" | "form_fields",
+    items: readonly { id: string; sort_order: number }[],
+    index: number,
+    direction: -1 | 1,
+  ) => {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+
+    const a = items[index];
+    const b = items[target];
+    if (!a || !b) return;
+
+    const aOrder = a.sort_order;
+    const bOrder =
+      b.sort_order === aOrder ? aOrder + direction * 5 : b.sort_order;
+
+    editor.swapOrder.mutate({
+      table,
+      a: { id: a.id, sort_order: aOrder },
+      b: { id: b.id, sort_order: bOrder },
+    });
+  };
+
   const openNewField = (
     sectionId: string,
     existingOrders: readonly number[],
@@ -261,6 +304,7 @@ export function AdminTemplateDetail() {
         sort_order: field.sort_order,
         options: parseStringArray(field.options),
         visible_if: parseVisibleIf(field.visible_if),
+        computed_from: parseStringArray(field.computed_from),
       },
       nonce: editorNonce,
     });
@@ -398,7 +442,7 @@ export function AdminTemplateDetail() {
         </div>
       )}
 
-      {sections.map((section) => (
+      {sections.map((section, sectionIndex) => (
         <section
           key={section.id}
           className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface-card)]"
@@ -410,6 +454,28 @@ export function AdminTemplateDetail() {
             </span>
             {isDraft && (
               <div className="ml-auto flex flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    moveItem("form_sections", sections, sectionIndex, -1)
+                  }
+                  disabled={editor.busy || sectionIndex === 0}
+                  aria-label={`Mover seção ${section.title} para cima`}
+                >
+                  <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() =>
+                    moveItem("form_sections", sections, sectionIndex, 1)
+                  }
+                  disabled={
+                    editor.busy || sectionIndex === sections.length - 1
+                  }
+                  aria-label={`Mover seção ${section.title} para baixo`}
+                >
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() =>
@@ -441,7 +507,7 @@ export function AdminTemplateDetail() {
             </p>
           ) : (
             <ul>
-              {section.fields.map((field) => {
+              {section.fields.map((field, fieldIndex) => {
                 const options = parseStringArray(field.options);
                 const computedFrom = parseStringArray(field.computed_from);
                 const visibleIf = parseVisibleIf(field.visible_if);
@@ -494,6 +560,29 @@ export function AdminTemplateDetail() {
                     {isDraft && (
                       <div className="flex flex-wrap gap-2 pt-1">
                         <Button
+                          variant="ghost"
+                          onClick={() =>
+                            moveItem("form_fields", section.fields, fieldIndex, -1)
+                          }
+                          disabled={editor.busy || fieldIndex === 0}
+                          aria-label={`Mover ${field.label} para cima`}
+                        >
+                          <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() =>
+                            moveItem("form_fields", section.fields, fieldIndex, 1)
+                          }
+                          disabled={
+                            editor.busy ||
+                            fieldIndex === section.fields.length - 1
+                          }
+                          aria-label={`Mover ${field.label} para baixo`}
+                        >
+                          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                        </Button>
+                        <Button
                           variant="outline"
                           onClick={() => openEditField(section.id, field)}
                           disabled={editor.busy}
@@ -534,6 +623,16 @@ export function AdminTemplateDetail() {
           )
             .filter((f) => f.id !== editorState.fieldId)
             .map((f) => f.key)}
+          computedCandidates={(
+            sections.find((sec) => sec.id === editorState.sectionId)?.fields ??
+            []
+          )
+            .filter(
+              (f) =>
+                canBeComputedSource(f.field_type) &&
+                f.id !== editorState.fieldId,
+            )
+            .map((f) => ({ key: f.key, label: f.label }))}
           visibleIfCandidates={(
             sections.find((sec) => sec.id === editorState.sectionId)?.fields ??
             []

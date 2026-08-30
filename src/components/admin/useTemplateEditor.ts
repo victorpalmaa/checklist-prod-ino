@@ -103,6 +103,8 @@ export function useTemplateEditor(templateId: string) {
         sort_order: draft.sort_order,
         options,
         visible_if: draft.visible_if,
+        computed_from:
+          draft.field_type === "computed_avg" ? draft.computed_from : null,
       };
 
       if (input.fieldId) {
@@ -121,6 +123,38 @@ export function useTemplateEditor(templateId: string) {
     onSuccess: () => {
       invalidate();
       toast.success("Campo salvo.");
+    },
+    onError,
+  });
+
+  /**
+   * Troca a posicao de dois itens escrevendo sort_order cruzado.
+   *
+   * Nao ha constraint de unicidade em sort_order, entao dois itens
+   * podem compartilhar o mesmo valor — nesse caso a troca crua nao
+   * mudaria nada. O chamador resolve isso passando as posicoes ja
+   * normalizadas pela ordem visual, nao os valores brutos do banco.
+   */
+  const swapOrder = useMutation({
+    mutationFn: async (input: {
+      table: "form_sections" | "form_fields";
+      a: { id: string; sort_order: number };
+      b: { id: string; sort_order: number };
+    }) => {
+      const { error: e1 } = await supabase
+        .from(input.table)
+        .update({ sort_order: input.b.sort_order })
+        .eq("id", input.a.id);
+      if (e1) throw e1;
+
+      const { error: e2 } = await supabase
+        .from(input.table)
+        .update({ sort_order: input.a.sort_order })
+        .eq("id", input.b.id);
+      if (e2) throw e2;
+    },
+    onSuccess: () => {
+      invalidate();
     },
     onError,
   });
@@ -145,7 +179,8 @@ export function useTemplateEditor(templateId: string) {
     renameSection.isPending ||
     deleteSection.isPending ||
     saveField.isPending ||
-    deleteField.isPending;
+    deleteField.isPending ||
+    swapOrder.isPending;
 
   return {
     createSection,
@@ -153,6 +188,7 @@ export function useTemplateEditor(templateId: string) {
     deleteSection,
     saveField,
     deleteField,
+    swapOrder,
     busy,
   };
 }

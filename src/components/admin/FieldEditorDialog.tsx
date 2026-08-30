@@ -35,6 +35,11 @@ export type VisibleIfCandidate = {
   options: string[];
 };
 
+export type ComputedCandidate = {
+  key: string;
+  label: string;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +50,8 @@ type Props = {
   existingKeys: readonly string[];
   /** campos radio/select da mesma secao, candidatos a controlar visibilidade */
   visibleIfCandidates: readonly VisibleIfCandidate[];
+  /** campos numericos da mesma secao, candidatos a origem de media */
+  computedCandidates: readonly ComputedCandidate[];
   saving: boolean;
   onSave: (draft: FieldDraft) => void;
 };
@@ -56,6 +63,7 @@ export function FieldEditorDialog({
   isNew,
   existingKeys,
   visibleIfCandidates,
+  computedCandidates,
   saving,
   onSave,
 }: Props) {
@@ -116,6 +124,8 @@ export function FieldEditorDialog({
       unit: draft.unit.trim(),
       help_text: draft.help_text.trim(),
       options: draft.options.map((o) => o.trim()).filter(Boolean),
+      computed_from:
+        draft.field_type === "computed_avg" ? draft.computed_from : [],
     };
     const err = validateFieldDraft(cleaned, existingKeys);
     if (err) {
@@ -215,6 +225,44 @@ export function FieldEditorDialog({
             </div>
           )}
 
+          {draft.field_type === "computed_avg" && (
+            <div className="space-y-2 rounded-[10px] border border-[var(--color-border)] p-3">
+              <Label>Campos de origem da média</Label>
+              {computedCandidates.length === 0 ? (
+                <p className="text-caption text-[var(--color-fg-muted)]">
+                  Nenhum campo numérico nesta seção para calcular a média.
+                </p>
+              ) : (
+                computedCandidates.map((c) => {
+                  const checked = draft.computed_from.includes(c.key);
+                  return (
+                    <div key={c.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`fe-cf-${c.key}`}
+                        checked={checked}
+                        onCheckedChange={(v) =>
+                          patch({
+                            computed_from:
+                              v === true
+                                ? [...draft.computed_from, c.key]
+                                : draft.computed_from.filter(
+                                    (k) => k !== c.key,
+                                  ),
+                          })
+                        }
+                      />
+                      <Label htmlFor={`fe-cf-${c.key}`}>{c.label}</Label>
+                    </div>
+                  );
+                })
+              )}
+              <p className="text-caption text-[var(--color-fg-muted)]">
+                Selecione ao menos dois. O valor é calculado
+                automaticamente e não pode ser preenchido à mão.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-3">
             <div className="flex-1 space-y-1">
               <Label htmlFor="fe-unit">Unidade</Label>
@@ -253,6 +301,7 @@ export function FieldEditorDialog({
               id="fe-required"
               checked={draft.required}
               onCheckedChange={(c) => patch({ required: c === true })}
+              disabled={draft.field_type === "computed_avg"}
             />
             <Label htmlFor="fe-required">Campo obrigatório</Label>
           </div>

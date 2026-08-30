@@ -73,6 +73,7 @@ export type FieldDraft = {
   sort_order: number;
   options: string[];
   visible_if: { field: string; equals: string } | null;
+  computed_from: string[];
 };
 
 export function emptyFieldDraft(nextSortOrder: number): FieldDraft {
@@ -86,7 +87,14 @@ export function emptyFieldDraft(nextSortOrder: number): FieldDraft {
     sort_order: nextSortOrder,
     options: [],
     visible_if: null,
+    computed_from: [],
   };
+}
+
+/** Campos que podem servir de origem para uma media calculada. Apenas
+ * numericos: a media de texto ou data nao faz sentido. */
+export function canBeComputedSource(t: FieldType): boolean {
+  return t === "number";
 }
 
 /**
@@ -121,7 +129,14 @@ export function validateFieldDraft(
   }
 
   if (draft.field_type === "computed_avg") {
-    return "Campos de média calculada ainda não podem ser criados por esta tela.";
+    // Espelha a constraint form_fields_computed_from_required_for_avg:
+    // o banco exige array com 2 ou mais elementos.
+    if (draft.computed_from.length < 2) {
+      return "Uma média calculada precisa de ao menos dois campos numéricos de origem.";
+    }
+    if (draft.required) {
+      return "Média calculada não pode ser obrigatória: o valor é calculado, não preenchido.";
+    }
   }
 
   if (draft.visible_if) {
