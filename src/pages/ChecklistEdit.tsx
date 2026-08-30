@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AttachmentsPanel } from "@/components/attachments/AttachmentsPanel";
+import { AutosaveIndicator } from "@/components/form/AutosaveIndicator";
 import { DynamicForm } from "@/components/form/DynamicForm";
 import {
   buildInitialValues,
@@ -167,7 +168,17 @@ export function ChecklistEdit() {
 
   const initial = buildInitialValues(snapshot, run, valuesQuery.data ?? []);
 
-  async function performSave(values: RunFormValues): Promise<boolean> {
+  /**
+   * skipSpecial existe para o autosave: performSave grava batch_number e
+   * production_date por UPDATE em checklist_runs. Se o autosave enviar
+   * um recorte de valores sem esses campos, o UPDATE os apagaria. Quando
+   * nada em `special` mudou, o UPDATE e pulado — o que tambem evita uma
+   * linha de audit_log em checklist_runs a cada ciclo.
+   */
+  async function performSave(
+    values: RunFormValues,
+    opts?: { skipSpecial?: boolean },
+  ): Promise<boolean> {
     const currentUser = auth.user?.id;
     if (!currentUser) {
       toast.error("Sua sessão expirou. Saia e entre novamente.");
@@ -255,11 +266,13 @@ export function ChecklistEdit() {
         if (upsertError) throw upsertError;
       }
 
-      const { error: updateError } = await supabase
-        .from("checklist_runs")
-        .update(updateCols)
-        .eq("id", id);
-      if (updateError) throw updateError;
+      if (!opts?.skipSpecial) {
+        const { error: updateError } = await supabase
+          .from("checklist_runs")
+          .update(updateCols)
+          .eq("id", id);
+        if (updateError) throw updateError;
+      }
 
       return true;
     } catch (err) {
@@ -310,6 +323,11 @@ export function ChecklistEdit() {
             {run.client} · Formulação {run.formulation_code} ·{" "}
             {snapshot.document_code} Rev. {snapshot.revision}
           </p>
+          <AutosaveIndicator
+            initial={initial}
+            getValues={() => formRef.current?.getValues() ?? null}
+            save={(values, opts) => performSave(values, opts)}
+          />
         </div>
 
         <DynamicForm
