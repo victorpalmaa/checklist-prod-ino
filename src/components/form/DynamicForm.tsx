@@ -3,7 +3,9 @@ import {
   useEffect,
   useImperativeHandle,
   useMemo,
+  useState,
 } from "react";
+import { ChevronDown } from "lucide-react";
 import { useForm, useWatch, type Control } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +15,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FieldRenderer } from "@/components/form/FieldRenderer";
+import {
+  sectionProgress,
+  totalProgress,
+} from "@/components/form/section-progress";
 import { extractFieldsByKey } from "@/types/form";
 import {
   SPECIAL_FIELD_KEYS,
@@ -27,6 +33,27 @@ import {
   sortedFields,
   isFieldVisible,
 } from "./dynamic-form-meta";
+
+function SectionBadge({ filled, required }: { filled: number; required: number }) {
+  if (required === 0) return null;
+  const done = filled >= required;
+  return (
+    <span
+      className="text-caption shrink-0 rounded-[6px] border px-2 py-0.5"
+      style={{
+        borderColor: done
+          ? "var(--color-success-border)"
+          : "var(--color-border-strong)",
+        backgroundColor: done
+          ? "var(--color-success-tint)"
+          : "var(--color-surface-subtle)",
+        color: done ? "var(--color-success-text)" : "var(--color-fg-muted)",
+      }}
+    >
+      {filled}/{required}
+    </span>
+  );
+}
 
 export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
   function DynamicForm(
@@ -66,6 +93,39 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
     name: "sections",
     disabled: readOnly,
   });
+
+  // Accordion controlado por estado proprio em vez de <details>: uma
+  // secao com erro de validacao precisa abrir sozinha, senao o operador
+  // clica em enviar e nao ve o que esta faltando.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+    () => {
+      const first = sortedSections(snapshot)[0]?.key;
+      return first ? { [first]: true } : {};
+    },
+  );
+
+  const toggleSection = (key: string) =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const progressBySection = useMemo(() => {
+    const map = new Map<string, { filled: number; required: number }>();
+    for (const sec of sections) {
+      map.set(sec.key, sectionProgress(sec, watchedSections ?? {}));
+    }
+    return map;
+  }, [sections, watchedSections]);
+
+  const overall = useMemo(
+    () => totalProgress(sections, watchedSections ?? {}),
+    [sections, watchedSections],
+  );
+
+  const sectionHasError = (sectionKey: string): boolean => {
+    const errs = form.formState.errors?.sections as
+      | Record<string, unknown>
+      | undefined;
+    return !!errs?.[sectionKey];
+  };
 
   useEffect(() => {
     if (readOnly) return;
@@ -127,14 +187,70 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
       className="flex flex-col gap-6"
       data-dynamic-checklist-form
     >
+      {!readOnly && overall.required > 0 ? (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-caption text-[var(--color-fg-secondary)]">
+              Campos obrigatórios preenchidos
+            </span>
+            <span className="text-caption tabular-nums text-[var(--color-fg-secondary)]">
+              {overall.filled}/{overall.required}
+            </span>
+          </div>
+          <div
+            className="h-2 w-full overflow-hidden rounded-[6px]"
+            style={{ backgroundColor: "var(--color-surface-subtle)" }}
+            role="progressbar"
+            aria-valuenow={overall.filled}
+            aria-valuemin={0}
+            aria-valuemax={overall.required}
+          >
+            <div
+              className="h-full duration-150 ease-in-out"
+              style={{
+                width: `${Math.round((overall.filled / overall.required) * 100)}%`,
+                backgroundColor:
+                  overall.filled >= overall.required
+                    ? "var(--color-success)"
+                    : "var(--color-brand)",
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {sections.map((section) => {
         const fields = sortedFields(section);
+        const prog = progressBySection.get(section.key) ?? {
+          filled: 0,
+          required: 0,
+        };
+        const isOpen =
+          readOnly || openSections[section.key] === true || sectionHasError(section.key);
         return (
           <Card key={section.key}>
-            <CardHeader>
-              <CardTitle>{section.title}</CardTitle>
+            <CardHeader className={isOpen ? undefined : "pb-6"}>
+              {readOnly ? (
+                <CardTitle>{section.title}</CardTitle>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.key)}
+                  aria-expanded={isOpen}
+                  className="flex min-h-[44px] w-full items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-primary)]"
+                >
+                  <ChevronDown
+                    className={`h-5 w-5 shrink-0 text-[var(--color-fg-muted)] duration-150 ease-in-out ${isOpen ? "" : "-rotate-90"}`}
+                    aria-hidden="true"
+                  />
+                  <CardTitle className="flex-1">{section.title}</CardTitle>
+                  <SectionBadge filled={prog.filled} required={prog.required} />
+                </button>
+              )}
             </CardHeader>
-            <CardContent className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <CardContent
+              className={`grid grid-cols-1 gap-5 lg:grid-cols-2 ${isOpen ? "" : "hidden"}`}
+            >
               {fields.map((field) => {
                 if (!isFieldVisible(field, section.key, watchedSections ?? {})) return null;
                 if (isSpecialKey(field.key)) {
