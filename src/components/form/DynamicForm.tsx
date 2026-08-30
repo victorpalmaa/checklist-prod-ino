@@ -265,15 +265,22 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
                     />
                   );
                 }
+                // Campo condicional ocupa a linha inteira: no grid de
+                // duas colunas ele apareceria ao lado da pergunta que o
+                // controla, e o alinhamento embaralha quando ele some.
                 return (
-                  <FieldRenderer<RunFormValues>
+                  <div
                     key={field.key}
-                    field={field}
-                    sectionKey={section.key}
-                    fullKey={sectionFieldKey(section.key, field.key)}
-                    control={form.control as Control<RunFormValues>}
-                    disabled={readOnly}
-                  />
+                    className={field.visible_if ? "lg:col-span-2" : undefined}
+                  >
+                    <FieldRenderer<RunFormValues>
+                      field={field}
+                      sectionKey={section.key}
+                      fullKey={sectionFieldKey(section.key, field.key)}
+                      control={form.control as Control<RunFormValues>}
+                      disabled={readOnly}
+                    />
+                  </div>
                 );
               })}
             </CardContent>
