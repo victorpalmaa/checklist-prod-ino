@@ -436,6 +436,91 @@ export function Dashboard() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Tempo médio até conclusão</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex min-h-[280px] flex-col items-center justify-center gap-3">
+                {avgCompletionDays === null ? (
+                  <p className="text-body text-[var(--color-fg-secondary)]">
+                    Sem dados suficientes
+                  </p>
+                ) : (
+                  <>
+                    <p
+                      className="text-display"
+                      style={{ color: "var(--color-brand)" }}
+                    >
+                      {avgCompletionDays.toFixed(2)}
+                    </p>
+                    <p className="text-body text-[var(--color-fg-secondary)]">
+                      dias em média entre criação e conclusão
+                    </p>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Registros por mês</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={monthlyData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--color-border)"
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--color-surface-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "10px",
+                        color: "var(--color-fg)",
+                        fontSize: 13,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="var(--color-brand)"
+                      strokeWidth={2}
+                      dot={{
+                        fill: "var(--color-brand)",
+                        strokeWidth: 0,
+                        r: 4,
+                      }}
+                      activeDot={{
+                        fill: "var(--color-brand)",
+                        strokeWidth: 0,
+                        r: 6,
+                      }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Registros criados por semana</CardTitle>
             </CardHeader>
             <CardContent>
@@ -560,33 +645,6 @@ export function Dashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Tempo médio até conclusão</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex min-h-[280px] flex-col items-center justify-center gap-3">
-                {avgCompletionDays === null ? (
-                  <p className="text-body text-[var(--color-fg-secondary)]">
-                    Sem dados suficientes
-                  </p>
-                ) : (
-                  <>
-                    <p
-                      className="text-display"
-                      style={{ color: "var(--color-brand)" }}
-                    >
-                      {avgCompletionDays.toFixed(2)}
-                    </p>
-                    <p className="text-body text-[var(--color-fg-secondary)]">
-                      dias em média entre criação e conclusão
-                    </p>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
               <CardTitle>Motivo do acompanhamento</CardTitle>
             </CardHeader>
             <CardContent>
@@ -632,64 +690,6 @@ export function Dashboard() {
                       radius={[0, 6, 6, 0]}
                     />
                   </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Registros por mês</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={monthlyData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--color-border)"
-                    />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "var(--color-border)" }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
-                      tickLine={false}
-                      axisLine={{ stroke: "var(--color-border)" }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "var(--color-surface-card)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "10px",
-                        color: "var(--color-fg)",
-                        fontSize: 13,
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="count"
-                      stroke="var(--color-brand)"
-                      strokeWidth={2}
-                      dot={{
-                        fill: "var(--color-brand)",
-                        strokeWidth: 0,
-                        r: 4,
-                      }}
-                      activeDot={{
-                        fill: "var(--color-brand)",
-                        strokeWidth: 0,
-                        r: 6,
-                      }}
-                    />
-                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
