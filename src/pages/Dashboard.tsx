@@ -41,6 +41,7 @@ type RunRow = Pick<
   | "submitted_at"
   | "completed_at"
   | "template_id"
+  | "accompaniment_reason"
 >;
 
 type TemplateRow = Pick<
@@ -144,7 +145,7 @@ export function Dashboard() {
       let builder = supabase
         .from("checklist_runs")
         .select(
-          "id, product_name, client, status, created_at, submitted_at, completed_at, template_id"
+          "id, product_name, client, status, created_at, submitted_at, completed_at, template_id, accompaniment_reason"
         )
         .order("created_at", { ascending: false });
       if (!incluirTeste) {
@@ -244,6 +245,40 @@ export function Dashboard() {
       fill: PRODUCT_CHART_COLORS[pt],
     }));
   }, [runs, templateMap]);
+
+  // Lista fechada definida pela Qualidade (ChecklistNew). Motivos fora
+  // dela vem de runs anteriores a essa decisao e caem em "Nao informado".
+  const reasonData = useMemo(() => {
+    const REASONS = [
+      "Teste piloto",
+      "Primeira produção",
+      "Intercorrência de produção",
+      "Alteração de fórmula",
+      "Validação processo",
+    ] as const;
+
+    const counts = new Map<string, number>();
+    for (const r of REASONS) counts.set(r, 0);
+    let outros = 0;
+
+    for (const run of runs) {
+      const reason = run.accompaniment_reason?.trim() ?? "";
+      if (!reason) {
+        outros += 1;
+      } else if (counts.has(reason)) {
+        counts.set(reason, (counts.get(reason) ?? 0) + 1);
+      } else {
+        outros += 1;
+      }
+    }
+
+    const rows = [...counts.entries()].map(([label, count]) => ({
+      label,
+      count,
+    }));
+    if (outros > 0) rows.push({ label: "Não informado", count: outros });
+    return rows;
+  }, [runs]);
 
   const monthlyData = useMemo(() => {
     const buckets: Record<string, { key: string; label: string; count: number }> =
@@ -546,6 +581,58 @@ export function Dashboard() {
                     </p>
                   </>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Motivo do acompanhamento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={reasonData}
+                    layout="vertical"
+                    margin={{ top: 10, right: 16, left: 8, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--color-border)"
+                      horizontal={false}
+                    />
+                    <XAxis
+                      type="number"
+                      allowDecimals={false}
+                      tick={{ fontSize: 12, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="label"
+                      width={150}
+                      tick={{ fontSize: 11, fill: "var(--color-fg-secondary)" }}
+                      tickLine={false}
+                      axisLine={{ stroke: "var(--color-border)" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--color-surface-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "10px",
+                        color: "var(--color-fg)",
+                        fontSize: 13,
+                      }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="var(--color-brand)"
+                      radius={[0, 6, 6, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
