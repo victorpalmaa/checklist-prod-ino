@@ -1,19 +1,30 @@
 import { useNavigate } from "react-router-dom";
-import { Container, Droplets, Pill, Candy } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
+// Icones oficiais fornecidos pelo Marketing, em public/produtos/.
+// Traco branco sobre o roxo da marca, ja recortados e centralizados.
 const OPTIONS: {
   slug: "po" | "gel" | "capsula" | "goma";
   label: string;
   available: boolean;
-  Icon: LucideIcon;
+  icon: string;
 }[] = [
-  { slug: "po", label: "Pó", available: true, Icon: Container },
-  { slug: "gel", label: "Gel", available: true, Icon: Droplets },
-  { slug: "capsula", label: "Cápsula", available: true, Icon: Pill },
-  { slug: "goma", label: "Goma", available: false, Icon: Candy },
+  { slug: "po", label: "Pó", available: true, icon: "/produtos/po.png" },
+  { slug: "gel", label: "Gel", available: true, icon: "/produtos/gel.png" },
+  {
+    slug: "capsula",
+    label: "Cápsula",
+    available: true,
+    icon: "/produtos/capsula.png",
+  },
+  {
+    slug: "goma",
+    label: "Goma",
+    available: false,
+    icon: "/produtos/goma.png",
+  },
 ];
 
 export function ChecklistTypeSelect() {
@@ -42,19 +53,13 @@ export function ChecklistTypeSelect() {
           >
             <CardContent className="flex min-h-[140px] flex-col items-start justify-between p-5">
               <div className="flex items-center gap-3">
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border"
-                  style={{
-                    backgroundColor: "var(--color-primary-tint)",
-                    borderColor: "var(--color-primary-border)",
-                  }}
+                <img
+                  src={opt.icon}
+                  alt=""
+                  className="h-11 w-11 shrink-0 rounded-[10px] border object-cover"
+                  style={{ borderColor: "var(--color-primary-border)" }}
                   aria-hidden
-                >
-                  <opt.Icon
-                    className="h-5 w-5"
-                    style={{ color: "var(--color-primary)" }}
-                  />
-                </span>
+                />
                 <h2 className="text-heading text-[var(--color-fg)]">
                   {opt.label}
                 </h2>
