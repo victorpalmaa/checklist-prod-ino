@@ -7,12 +7,18 @@ import {
   LogOut,
   ScrollText,
   Users,
+  Menu,
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { Logo } from "@/components/brand/Logo";
 import { RoleGate } from "@/components/auth/RoleGate";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,17 +105,110 @@ function deriveInitials(fullName: string | null | undefined): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
+function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <>
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="mb-3 px-2">
+          <span className="text-eyebrow">Menu</span>
+        </div>
+        <ul className="flex flex-col gap-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.label}>
+                <NavLink
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    cn(
+                      "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                      isActive
+                        ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                        : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                    )
+                  }
+                >
+                  <Icon
+                    className="h-5 w-5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>{item.label}</span>
+                </NavLink>
+              </li>
+            );
+          })}
+          <RoleGate allow={["admin"]}>
+            <li>
+              <NavLink
+                to="/auditoria"
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                    isActive
+                      ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                      : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                  )
+                }
+              >
+                <ScrollText
+                  className="h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>Auditoria</span>
+              </NavLink>
+            </li>
+          </RoleGate>
+          <RoleGate allow={["admin"]}>
+            <li>
+              <NavLink
+                to="/admin/usuarios"
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  cn(
+                    "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
+                    isActive
+                      ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
+                      : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
+                  )
+                }
+              >
+                <Users
+                  className="h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>Usuários</span>
+              </NavLink>
+            </li>
+          </RoleGate>
+        </ul>
+      </nav>
+
+      <div className="border-t border-[var(--color-primary-border)] px-5 py-4">
+        <div className="mb-2">
+          <span className="text-eyebrow">Sistema</span>
+        </div>
+        <p className="whitespace-nowrap text-[11px] leading-tight text-[var(--color-fg-muted)]">
+          RED-029 — Checklist de produção
+        </p>
+      </div>
+    </>
+  );
+}
+
 export function AppShell({ children, className }: AppShellProps) {
   const navigate = useNavigate();
   const breadcrumb = useBreadcrumb();
   const { profile, signOut } = useAuth();
   const userName = profile?.full_name ?? "";
   const userInitials = deriveInitials(profile?.full_name);
+  const [menuAberto, setMenuAberto] = React.useState(false);
 
   return (
     <div className={cn("flex min-h-screen w-full bg-[var(--color-surface-page)]", className)}>
       <aside
-        className="flex h-screen w-[280px] shrink-0 flex-col border-r border-[var(--color-primary-border)] bg-[var(--color-surface-card)]"
+        className="hidden h-screen w-[280px] shrink-0 flex-col border-r border-[var(--color-primary-border)] bg-[var(--color-surface-card)] lg:flex"
         aria-label="Navegação principal"
       >
         <div className="flex h-16 shrink-0 items-center gap-2.5 px-4 border-b border-[var(--color-primary-border)]">
@@ -119,92 +218,34 @@ export function AppShell({ children, className }: AppShellProps) {
           </span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="mb-3 px-2">
-            <span className="text-eyebrow">Menu</span>
-          </div>
-          <ul className="flex flex-col gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.label}>
-                  <NavLink
-                    to={item.to}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
-                        isActive
-                          ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
-                          : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
-                      )
-                    }
-                  >
-                    <Icon
-                      className="h-5 w-5 shrink-0"
-                      aria-hidden="true"
-                    />
-                    <span>{item.label}</span>
-                  </NavLink>
-                </li>
-              );
-            })}
-            <RoleGate allow={["admin"]}>
-              <li>
-                <NavLink
-                  to="/auditoria"
-                  className={({ isActive }) =>
-                    cn(
-                      "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
-                      isActive
-                        ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
-                        : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
-                    )
-                  }
-                >
-                  <ScrollText
-                    className="h-5 w-5 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>Auditoria</span>
-                </NavLink>
-              </li>
-            </RoleGate>
-            <RoleGate allow={["admin"]}>
-              <li>
-                <NavLink
-                  to="/admin/usuarios"
-                  className={({ isActive }) =>
-                    cn(
-                      "flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-[10px] border-l-3 px-3 py-2 text-[14px] font-medium duration-150 ease-in-out",
-                      isActive
-                        ? "border-l-[var(--color-brand)] bg-[var(--color-primary-tint)] text-[var(--color-primary-text)]"
-                        : "border-l-transparent text-[var(--color-fg-secondary)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)]"
-                    )
-                  }
-                >
-                  <Users
-                    className="h-5 w-5 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>Usuários</span>
-                </NavLink>
-              </li>
-            </RoleGate>
-          </ul>
-        </nav>
-
-        <div className="border-t border-[var(--color-primary-border)] px-5 py-4">
-          <div className="mb-2">
-            <span className="text-eyebrow">Sistema</span>
-          </div>
-          <p className="whitespace-nowrap text-[11px] leading-tight text-[var(--color-fg-muted)]">
-            RED-029 — Checklist de produção
-          </p>
-        </div>
+        <SidebarNav />
       </aside>
 
+      <Sheet open={menuAberto} onOpenChange={setMenuAberto}>
+        <SheetContent side="left" className="lg:hidden">
+          <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--color-primary-border)] px-4">
+            <Logo variant="color" height={24} />
+            <SheetTitle className="whitespace-nowrap text-[13px] font-semibold text-[var(--color-fg)]">
+              Checklist de produção
+            </SheetTitle>
+          </div>
+          <SidebarNav onNavigate={() => setMenuAberto(false)} />
+        </SheetContent>
+      </Sheet>
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-[var(--color-primary-border)] bg-[var(--color-surface-card)] px-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 lg:gap-4 border-b border-[var(--color-primary-border)] bg-[var(--color-surface-card)] px-4 lg:px-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            aria-label="Abrir menu"
+            className="h-11 w-11 shrink-0 lg:hidden"
+            onClick={() => setMenuAberto(true)}
+          >
+            <Menu className="h-5 w-5" aria-hidden="true" />
+          </Button>
+
           <nav className="min-w-0 flex-1" aria-label="Caminho da página">
             <ol className="flex flex-wrap items-center gap-1.5">
               {breadcrumb.map((crumb, i) => (
@@ -237,9 +278,10 @@ export function AppShell({ children, className }: AppShellProps) {
               size="sm"
               onClick={() => navigate("/checklists/novo")}
               type="button"
+              aria-label="Novo registro"
             >
               <Plus className="h-5 w-5" aria-hidden="true" />
-              Novo registro
+              <span className="hidden sm:inline">Novo registro</span>
             </Button>
 
             <DropdownMenu>
@@ -280,7 +322,7 @@ export function AppShell({ children, className }: AppShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6" id="conteudo-principal">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6" id="conteudo-principal">
           {children}
         </main>
       </div>
