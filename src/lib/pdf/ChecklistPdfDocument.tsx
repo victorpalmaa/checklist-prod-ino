@@ -442,6 +442,15 @@ export function ChecklistPdfDocument({
     (run.batch_number && run.batch_number.length > 0) ||
     run.production_date;
 
+  // Rascunho e anulado precisam de marca d'agua; submetido e assinado sao
+  // documentos validos e saem limpos.
+  const watermarkLabel =
+    run.status === "draft"
+      ? "RASCUNHO"
+      : run.status === "voided"
+        ? "ANULADO"
+        : null;
+
   return (
     <Document
       author="Pronutrition"
@@ -449,9 +458,9 @@ export function ChecklistPdfDocument({
       title={`${snapshot.title} - ${run.product_name}`}
     >
       <Page size="A4" style={styles.page} wrap>
-        {run.status !== "signed" ? (
+        {watermarkLabel ? (
           <View style={styles.watermark} fixed>
-            <Text>RASCUNHO</Text>
+            <Text>{watermarkLabel}</Text>
           </View>
         ) : null}
 
