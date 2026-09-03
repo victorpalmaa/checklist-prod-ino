@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -63,6 +65,7 @@ export function SignaturePanel({
   const queryClient = useQueryClient();
   const [confirmRole, setConfirmRole] = useState<SignatureRole | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
+  const [observation, setObservation] = useState<string>("");
 
   const byRole = useMemo(() => {
     const map = new Map<SignatureRole, SignatureRow>();
@@ -81,6 +84,7 @@ export function SignaturePanel({
         p_run_id: runId,
         p_role: confirmRole,
         p_statement: statement,
+        p_observation: observation.trim() || null,
       });
       if (error) {
         toast.error(mapSupabaseError(error));
@@ -98,6 +102,7 @@ export function SignaturePanel({
     } finally {
       setBusy(false);
       setConfirmRole(null);
+      setObservation("");
     }
   }
 
@@ -139,6 +144,11 @@ export function SignaturePanel({
                     <div className="text-caption text-[var(--color-fg-secondary)]">
                       {sig.statement}
                     </div>
+                    {sig.observation ? (
+                      <div className="mt-1 border-t border-[var(--color-success-border)] pt-2 text-caption text-[var(--color-fg-secondary)]">
+                        {sig.observation}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -186,7 +196,10 @@ export function SignaturePanel({
       <AlertDialog
         open={confirmRole !== null}
         onOpenChange={(open) => {
-          if (!open && !busy) setConfirmRole(null);
+          if (!open && !busy) {
+            setConfirmRole(null);
+            setObservation("");
+          }
         }}
       >
         <AlertDialogContent>
@@ -196,6 +209,23 @@ export function SignaturePanel({
               <div className="flex flex-col gap-4 pt-2">
                 <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface-card)] p-4 text-body text-[var(--color-fg)]">
                   “{activeStatement}”
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="signature-observation" className="text-label">
+                    Observação (opcional)
+                  </Label>
+                  <Textarea
+                    id="signature-observation"
+                    value={observation}
+                    onChange={(e) => setObservation(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    disabled={busy}
+                    placeholder="Registre aqui qualquer ressalva ou contexto desta assinatura."
+                  />
+                  <span className="text-caption text-[var(--color-fg-muted)]">
+                    {observation.length}/1000
+                  </span>
                 </div>
                 <p className="text-body text-[var(--color-fg-secondary)]">
                   A assinatura é definitiva e não pode ser removida.
@@ -207,6 +237,7 @@ export function SignaturePanel({
             <AlertDialogCancel
               disabled={busy}
               className="min-h-[44px]"
+              onClick={() => setObservation("")}
             >
               Cancelar
             </AlertDialogCancel>

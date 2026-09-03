@@ -49,6 +49,7 @@ type SignatureData = {
   role: string;
   signed_name: string | null;
   statement: string | null;
+  observation?: string | null;
   signed_at: string | null;
 };
 
@@ -278,6 +279,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: BRAND.textSecondary,
     fontStyle: "italic",
+  },
+  signatureObservation: {
+    fontSize: 9,
+    color: BRAND.textSecondary,
+    marginTop: 3,
   },
   signaturePending: {
     fontSize: 10,
@@ -661,7 +667,12 @@ export function ChecklistPdfDocument({
                     <Text style={styles.signatureName}>{sig.signed_name}</Text>
                     {sig.statement ? (
                       <Text style={styles.signatureStatement}>
-                        “{sig.statement}”
+                        "{sig.statement}"
+                      </Text>
+                    ) : null}
+                    {sig.observation ? (
+                      <Text style={styles.signatureObservation}>
+                        {sig.observation}
                       </Text>
                     ) : null}
                   </>

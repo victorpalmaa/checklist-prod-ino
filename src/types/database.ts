@@ -354,6 +354,7 @@ export type Database = {
           signed_by: string;
           signed_name: string;
           statement: string;
+          observation: string | null;
           signed_at: string;
         };
         Insert: {
@@ -363,6 +364,7 @@ export type Database = {
           signed_by: string;
           signed_name: string;
           statement: string;
+          observation?: string | null;
           signed_at?: string;
         };
         Update: {
@@ -372,6 +374,7 @@ export type Database = {
           signed_by?: string;
           signed_name?: string;
           statement?: string;
+          observation?: string | null;
           signed_at?: string;
         };
         Relationships: [
