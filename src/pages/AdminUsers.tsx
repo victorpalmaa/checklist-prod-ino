@@ -30,8 +30,13 @@ type AppRole = Database["public"]["Enums"]["app_role"];
 type ListUserRow = {
   id: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   registration_code: string | null;
+  area: string | null;
+  job_title: string | null;
+  invited_by_name: string | null;
   role: AppRole;
   active: boolean;
   created_at: string;
@@ -43,6 +48,11 @@ const ROLE_OPTIONS: readonly { value: AppRole; label: string }[] = [
   { value: "inovacao", label: "Inovação" },
   { value: "admin", label: "Administrador" },
 ] as const;
+
+/** Espelha a constraint profiles_area_valid. Divergir daqui quebra o
+ *  UPDATE com erro de check constraint. */
+const AREAS = ["Inovação", "Qualidade", "Produção"] as const;
+type Area = (typeof AREAS)[number];
 
 function roleLabel(r: AppRole): string {
   return ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
@@ -109,7 +119,11 @@ export function AdminUsers() {
     const list = listQuery.data ?? [];
     const q = qParam.trim().toLowerCase();
     return list.filter((u) => {
-      if (q && !u.full_name.toLowerCase().includes(q)) return false;
+      if (q) {
+        const matchesName = u.full_name.toLowerCase().includes(q);
+        const matchesEmail = u.email?.toLowerCase().includes(q) ?? false;
+        if (!matchesName && !matchesEmail) return false;
+      }
       if (papelParam !== "all" && u.role !== papelParam) return false;
       return true;
     });
@@ -178,6 +192,98 @@ export function AdminUsers() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
       toast.success("Matrícula atualizada.");
+    },
+    onError: (err) => {
+      toast.error(mapSupabaseError(err));
+    },
+  });
+
+  const updateFirstNameMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      newValue,
+    }: {
+      userId: string;
+      newValue: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ first_name: newValue })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast.success("Nome atualizado.");
+    },
+    onError: (err) => {
+      toast.error(mapSupabaseError(err));
+    },
+  });
+
+  const updateLastNameMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      newValue,
+    }: {
+      userId: string;
+      newValue: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ last_name: newValue })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast.success("Sobrenome atualizado.");
+    },
+    onError: (err) => {
+      toast.error(mapSupabaseError(err));
+    },
+  });
+
+  const updateAreaMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      newValue,
+    }: {
+      userId: string;
+      newValue: Area | null;
+    }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ area: newValue })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast.success("Área atualizada.");
+    },
+    onError: (err) => {
+      toast.error(mapSupabaseError(err));
+    },
+  });
+
+  const updateJobTitleMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      newValue,
+    }: {
+      userId: string;
+      newValue: string | null;
+    }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ job_title: newValue })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+      toast.success("Cargo atualizado.");
     },
     onError: (err) => {
       toast.error(mapSupabaseError(err));
@@ -322,6 +428,10 @@ export function AdminUsers() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Matrícula</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Sobrenome</TableHead>
+                <TableHead>Área</TableHead>
+                <TableHead>Cargo</TableHead>
                 <TableHead>Papel</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criado em</TableHead>
@@ -364,6 +474,93 @@ export function AdminUsers() {
                           updateRegistrationMutation.mutate({
                             userId: row.id,
                             newCode,
+                          });
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="min-w-[180px]">
+                      <Input
+                        defaultValue={row.first_name ?? ""}
+                        placeholder="(sem nome)"
+                        aria-label={`Nome de ${row.full_name}`}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const newValue = raw.length > 0 ? raw : null;
+                          if (
+                            (row.first_name ?? null) ===
+                            (newValue ?? null)
+                          ) {
+                            return;
+                          }
+                          updateFirstNameMutation.mutate({
+                            userId: row.id,
+                            newValue,
+                          });
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="min-w-[180px]">
+                      <Input
+                        defaultValue={row.last_name ?? ""}
+                        placeholder="(sem sobrenome)"
+                        aria-label={`Sobrenome de ${row.full_name}`}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const newValue = raw.length > 0 ? raw : null;
+                          if (
+                            (row.last_name ?? null) ===
+                            (newValue ?? null)
+                          ) {
+                            return;
+                          }
+                          updateLastNameMutation.mutate({
+                            userId: row.id,
+                            newValue,
+                          });
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell className="min-w-[180px]">
+                      <Select
+                        value={row.area ?? ""}
+                        disabled={isSelf || updateAreaMutation.isPending}
+                        onValueChange={(v) =>
+                          updateAreaMutation.mutate({
+                            userId: row.id,
+                            newValue: v.length > 0 ? (v as Area) : null,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="—" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">—</SelectItem>
+                          {AREAS.map((a) => (
+                            <SelectItem key={a} value={a}>
+                              {a}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="min-w-[180px]">
+                      <Input
+                        defaultValue={row.job_title ?? ""}
+                        placeholder="(sem cargo)"
+                        aria-label={`Cargo de ${row.full_name}`}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const newValue = raw.length > 0 ? raw : null;
+                          if (
+                            (row.job_title ?? null) ===
+                            (newValue ?? null)
+                          ) {
+                            return;
+                          }
+                          updateJobTitleMutation.mutate({
+                            userId: row.id,
+                            newValue,
                           });
                         }}
                       />

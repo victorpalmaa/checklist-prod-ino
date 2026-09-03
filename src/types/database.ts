@@ -28,7 +28,12 @@ export type Database = {
         Row: {
           id: string;
           full_name: string;
+          first_name: string | null;
+          last_name: string | null;
           registration_code: string | null;
+          area: string | null;
+          job_title: string | null;
+          invited_by: string | null;
           role: Database["public"]["Enums"]["app_role"];
           active: boolean;
           created_at: string;
@@ -36,7 +41,12 @@ export type Database = {
         Insert: {
           id: string;
           full_name: string;
+          first_name?: string | null;
+          last_name?: string | null;
           registration_code?: string | null;
+          area?: string | null;
+          job_title?: string | null;
+          invited_by?: string | null;
           role?: Database["public"]["Enums"]["app_role"];
           active?: boolean;
           created_at?: string;
@@ -44,7 +54,12 @@ export type Database = {
         Update: {
           id?: string;
           full_name?: string;
+          first_name?: string | null;
+          last_name?: string | null;
           registration_code?: string | null;
+          area?: string | null;
+          job_title?: string | null;
+          invited_by?: string | null;
           role?: Database["public"]["Enums"]["app_role"];
           active?: boolean;
           created_at?: string;
