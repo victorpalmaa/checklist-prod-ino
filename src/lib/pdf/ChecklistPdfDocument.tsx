@@ -208,6 +208,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: BRAND.textPrimary,
   },
+  fieldPairRow: {
+    flexDirection: "row",
+    marginBottom: 6,
+  },
+  fieldCell: {
+    flex: 1,
+    paddingRight: 12,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  fieldCellLast: {
+    paddingRight: 0,
+  },
+  fieldCellLabel: {
+    fontSize: 9,
+    color: BRAND.textSecondary,
+    fontWeight: "bold",
+    marginBottom: 2,
+  },
+  fieldCellValue: {
+    fontSize: 10,
+    color: BRAND.textPrimary,
+  },
   signaturesBlock: {
     marginTop: 18,
   },
@@ -403,6 +427,43 @@ function formatFieldValue(
   return field.unit ? `${s} ${field.unit}` : s;
 }
 
+/**
+ * Campos que ocupam a largura inteira da pagina. Textarea recebe texto
+ * livre e computed_avg fica ao lado do proprio trio quando pareado, mas
+ * texto longo quebrado em meia pagina fica ilegivel.
+ */
+const FULL_WIDTH_TYPES = new Set(["textarea"]);
+
+/**
+ * Agrupa campos em linhas de renderizacao: campos curtos em pares,
+ * campos longos sozinhos. Preserva a ordem original — sort_order define
+ * a sequencia do documento controlado e nao pode ser reorganizada.
+ */
+function groupFieldsIntoRows(fields: SnapshotField[]): SnapshotField[][] {
+  const rows: SnapshotField[][] = [];
+  let pending: SnapshotField | null = null;
+
+  for (const field of fields) {
+    if (FULL_WIDTH_TYPES.has(field.field_type)) {
+      if (pending) {
+        rows.push([pending]);
+        pending = null;
+      }
+      rows.push([field]);
+      continue;
+    }
+    if (pending) {
+      rows.push([pending, field]);
+      pending = null;
+    } else {
+      pending = field;
+    }
+  }
+
+  if (pending) rows.push([pending]);
+  return rows;
+}
+
 export interface ChecklistPdfDocumentProps {
   run: RunData;
   snapshot: TemplateSnapshot;
@@ -537,17 +598,32 @@ export function ChecklistPdfDocument({
           return (
             <View key={sec.key} style={styles.section}>
               <Text style={styles.sectionTitle}>{sec.title}</Text>
-              {visibleFields.map((field) => (
-                <View key={field.key} style={styles.fieldRow}>
-                  <Text style={styles.fieldLabel}>{field.label}</Text>
-                  <Text style={styles.fieldValue}>
-                    {formatFieldValue(
-                      field,
-                      sec.key,
-                      sectionsData,
-                      fieldsByKey,
-                    )}
-                  </Text>
+              {groupFieldsIntoRows(visibleFields).map((row, rowIndex) => (
+                <View
+                  key={`${sec.key}-row-${rowIndex}`}
+                  style={styles.fieldPairRow}
+                  wrap={false}
+                >
+                  {row.map((field, cellIndex) => (
+                    <View
+                      key={field.key}
+                      style={
+                        cellIndex === row.length - 1
+                          ? [styles.fieldCell, styles.fieldCellLast]
+                          : styles.fieldCell
+                      }
+                    >
+                      <Text style={styles.fieldCellLabel}>{field.label}</Text>
+                      <Text style={styles.fieldCellValue}>
+                        {formatFieldValue(
+                          field,
+                          sec.key,
+                          sectionsData,
+                          fieldsByKey,
+                        )}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
               ))}
               {secAttachments.length > 0 ? (
