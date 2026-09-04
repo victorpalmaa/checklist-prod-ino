@@ -115,8 +115,15 @@ export async function uploadAttachment(input: {
   }
 }
 
-/** Remove a linha e o objeto. A linha primeiro: se o Storage falhar,
- * sobra objeto orfao invisivel, o que e melhor que linha apontando
+/** Remove a evidencia do registro.
+ *
+ * Evidencia HERDADA (copied_from_attachment_id preenchido) compartilha o
+ * objeto no Storage com um registro ANULADO, que e imutavel. Nesse caso
+ * apaga-se apenas o vinculo: o arquivo continua sustentando o registro de
+ * origem.
+ *
+ * Evidencia PROPRIA remove linha e objeto. A linha primeiro: se o Storage
+ * falhar, sobra objeto orfao invisivel, o que e melhor que linha apontando
  * para arquivo inexistente. */
 export async function deleteAttachment(row: AttachmentRow): Promise<void> {
   const { error } = await supabase
@@ -124,6 +131,8 @@ export async function deleteAttachment(row: AttachmentRow): Promise<void> {
     .delete()
     .eq("id", row.id);
   if (error) throw error;
+
+  if (row.copied_from_attachment_id !== null) return;
 
   await supabase.storage.from(ATTACHMENTS_BUCKET).remove([row.storage_path]);
 }

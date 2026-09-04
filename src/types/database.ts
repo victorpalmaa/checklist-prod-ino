@@ -406,6 +406,7 @@ export type Database = {
           size_bytes: number;
           uploaded_by: string;
           uploaded_at: string;
+          copied_from_attachment_id: string | null;
         };
         Insert: {
           id?: string;
@@ -418,6 +419,7 @@ export type Database = {
           size_bytes: number;
           uploaded_by: string;
           uploaded_at?: string;
+          copied_from_attachment_id?: string | null;
         };
         Update: {
           id?: string;
@@ -430,6 +432,7 @@ export type Database = {
           size_bytes?: number;
           uploaded_by?: string;
           uploaded_at?: string;
+          copied_from_attachment_id?: string | null;
         };
         Relationships: [
           {

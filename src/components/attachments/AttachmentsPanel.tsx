@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, Trash2, ImageOff } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -75,9 +76,14 @@ function AttachmentThumb({
         )}
       </div>
       <figcaption className="space-y-1 px-2 py-2">
-        <p className="text-caption truncate text-[var(--color-fg-secondary)]">
-          {row.file_name}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-caption flex-1 truncate text-[var(--color-fg-secondary)]">
+            {row.file_name}
+          </p>
+          {row.copied_from_attachment_id ? (
+            <Badge variant="outline">Herdada</Badge>
+          ) : null}
+        </div>
         <p className="text-caption text-[var(--color-fg-muted)]">
           {formatSize(row.size_bytes)}
         </p>
