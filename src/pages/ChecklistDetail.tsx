@@ -323,7 +323,7 @@ export function ChecklistDetail() {
   // A autorizacao real e a validacao de 20 caracteres vivem em
   // void_and_supersede_run; forcar a chamada nao contorna nada.
   const canCorrect =
-    status === "signed" &&
+    (status === "submitted" || status === "signed") &&
     !successor &&
     !!auth.profile &&
     (auth.profile.role === "admin" || run.created_by === auth.profile.id);
