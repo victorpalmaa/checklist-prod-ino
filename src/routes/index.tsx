@@ -10,6 +10,8 @@ import {
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { AppShell } from "@/components/shell/AppShell";
 import { Login } from "@/pages/Login";
+import { RecoverPassword } from "@/pages/RecoverPassword";
+import { SetPassword } from "@/pages/SetPassword";
 import { ChecklistsList } from "@/pages/ChecklistsList";
 import { ChecklistTypeSelect } from "@/pages/ChecklistTypeSelect";
 import { ChecklistTypePlaceholder } from "@/pages/ChecklistTypePlaceholder";
@@ -68,6 +70,8 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/definir-senha" element={<SetPassword />} />
+        <Route path="/recuperar-senha" element={<RecoverPassword />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<Shell />}>
             <Route path="/" element={<Navigate to="/checklists" replace />} />

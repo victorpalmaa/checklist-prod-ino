@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -185,6 +185,14 @@ export function Login() {
             className="min-h-[44px] w-full"
           >
             {submitting ? "Entrando..." : "Entrar"}
+          </Button>
+
+          <Button
+            asChild
+            variant="ghost"
+            className="min-h-[44px] w-full"
+          >
+            <Link to="/recuperar-senha">Esqueci minha senha</Link>
           </Button>
         </form>
       </div>
