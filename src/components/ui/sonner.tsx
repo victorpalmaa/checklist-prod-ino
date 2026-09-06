@@ -35,8 +35,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:bg-[var(--color-primary)] group-[.toast]:text-white group-[.toast]:rounded-[10px] group-[.toast]:px-3 group-[.toast]:py-2 text-[13px] font-medium min-h-[44px] inline-flex items-center",
           cancelButton:
             "group-[.toast]:bg-[var(--color-surface-subtle)] group-[.toast]:text-[var(--color-fg)] group-[.toast]:rounded-[10px] group-[.toast]:px-3 group-[.toast]:py-2 text-[13px] font-medium min-h-[44px] inline-flex items-center",
+          // NAO usado: o Toaster e montado sem closeButton em App.tsx.
+          // A posicao do botao no Sonner 1.7 e definida por inset e
+          // transform internos que nem !important inline sobrescreve
+          // (diagnosticado por getComputedStyle). O toast fecha por
+          // timeout e por clique, entao o X e conveniencia, nao funcao.
+          // Reativar exige um wrapper proprio, nao este atalho.
           closeButton:
-            "group-[.toast]:rounded-[10px] group-[.toast]:p-2 group-[.toast]:hover:bg-[var(--color-surface-subtle)] min-h-[44px] min-w-[44px] inline-flex items-center justify-center",
+            "absolute right-2 top-2 rounded-[8px] p-1.5 text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-subtle)] hover:text-[var(--color-fg)] inline-flex items-center justify-center",
         },
       }}
       {...props}

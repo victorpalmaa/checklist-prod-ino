@@ -1,14 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ShieldAlert, Users } from "lucide-react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
 import type { Database } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -24,6 +29,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
@@ -54,6 +67,13 @@ const ROLE_OPTIONS: readonly { value: AppRole; label: string }[] = [
 const AREAS = ["Inovação", "Qualidade", "Produção"] as const;
 type Area = (typeof AREAS)[number];
 
+/** Espelha ROLES_BY_INVITER da Edge Function invite-user. O servidor e quem
+ *  decide; isto so evita oferecer uma opcao que seria recusada. */
+const ROLES_BY_INVITER: Record<string, AppRole[]> = {
+  admin: ["operador", "qualidade", "inovacao", "admin"],
+  inovacao: ["operador", "qualidade", "inovacao"],
+};
+
 function roleLabel(r: AppRole): string {
   return ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
 }
@@ -75,6 +95,17 @@ function formatDateTimePtBr(iso: string | null): string {
   }
 }
 
+const inviteSchema = z.object({
+  first_name: z.string().min(1, "Informe o nome"),
+  last_name: z.string().min(1, "Informe o sobrenome"),
+  email: z.string().min(1, "Informe o e-mail").email("E-mail inválido"),
+  area: z.enum(AREAS, { required_error: "Selecione a área" }),
+  job_title: z.string().optional(),
+  role: z.string().min(1, "Selecione o papel"),
+});
+
+type InviteFormValues = z.infer<typeof inviteSchema>;
+
 export function AdminUsers() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -83,6 +114,34 @@ export function AdminUsers() {
 
   const profile = auth.profile;
   const isAdmin = !!(profile && profile.role === "admin");
+  const canView =
+    isAdmin || !!(profile && profile.role === "inovacao");
+  const canInvite =
+    isAdmin || !!(profile && profile.role === "inovacao");
+  const invitableRoles = profile
+    ? (ROLES_BY_INVITER[profile.role] ?? [])
+    : [];
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors },
+  } = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: {
+      first_name: "",
+      last_name: "",
+      email: "",
+      area: undefined,
+      job_title: "",
+      role: "operador",
+    },
+  });
 
   const qParam = searchParams.get("q") ?? "";
   const papelParam = searchParams.get("papel") ?? "all";
@@ -109,7 +168,7 @@ export function AdminUsers() {
       const arr = Array.isArray(data) ? (data as unknown as ListUserRow[]) : [];
       return arr;
     },
-    enabled: !auth.loading && !!auth.session && isAdmin,
+    enabled: !auth.loading && !!auth.session && canView,
     staleTime: 30_000,
     retry: 1,
     refetchOnWindowFocus: false,
@@ -290,6 +349,48 @@ export function AdminUsers() {
     },
   });
 
+  const onInvite = async (values: InviteFormValues) => {
+    setInviting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: {
+          first_name: values.first_name.trim(),
+          last_name: values.last_name.trim(),
+          email: values.email.trim(),
+          area: values.area,
+          job_title: values.job_title?.trim() ?? "",
+          role: values.role,
+        },
+      });
+
+      if (error) {
+        let msg = "Não foi possível enviar o convite.";
+        if (error instanceof FunctionsHttpError) {
+          try {
+            const body = await error.context.json();
+            if (body?.error) msg = body.error;
+          } catch {
+            // corpo nao-JSON: mantem a mensagem generica
+          }
+        }
+        toast.error(msg);
+        return;
+      }
+
+      if (data?.warning) {
+        toast(data.warning);
+      } else {
+        toast.success("Convite enviado.");
+      }
+
+      setInviteOpen(false);
+      reset();
+      await queryClient.invalidateQueries({ queryKey: ["admin-users-list"] });
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const onQChange = (v: string) => {
     setQLocal(v);
     setSearchParams((prev) => {
@@ -316,7 +417,7 @@ export function AdminUsers() {
 
   const hasAnyFilter = qParam !== "" || papelParam !== "all";
 
-  if (!isAdmin) {
+  if (!canView) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-[12px] border border-[var(--color-danger-border)] bg-[var(--color-danger-tint)] p-8 text-center">
         <ShieldAlert
@@ -348,19 +449,11 @@ export function AdminUsers() {
             Gerencie contas e permissões de acesso ao sistema.
           </p>
         </div>
-      </div>
-
-      <div
-        className="flex items-start gap-3 rounded-[12px] border border-[var(--color-primary-border)] bg-[var(--color-primary-tint)] p-4"
-        role="note"
-      >
-        <Users
-          className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-primary-text)]"
-          aria-hidden="true"
-        />
-        <p className="text-body text-[var(--color-primary-text)]">
-          Para criar uma nova conta, entre em contato com o Victor.
-        </p>
+        {canInvite ? (
+          <Button onClick={() => setInviteOpen(true)} className="min-h-[44px]">
+            Convidar usuário
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -425,7 +518,7 @@ export function AdminUsers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
+                <TableHead>Nome completo</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Matrícula</TableHead>
                 <TableHead>Nome</TableHead>
@@ -462,6 +555,7 @@ export function AdminUsers() {
                         defaultValue={row.registration_code ?? ""}
                         placeholder="(sem matrícula)"
                         aria-label={`Matrícula de ${row.full_name}`}
+                        disabled={!isAdmin}
                         onBlur={(e) => {
                           const raw = e.target.value.trim();
                           const newCode = raw.length > 0 ? raw : null;
@@ -483,6 +577,7 @@ export function AdminUsers() {
                         defaultValue={row.first_name ?? ""}
                         placeholder="(sem nome)"
                         aria-label={`Nome de ${row.full_name}`}
+                        disabled={!isAdmin}
                         onBlur={(e) => {
                           const raw = e.target.value.trim();
                           const newValue = raw.length > 0 ? raw : null;
@@ -504,6 +599,7 @@ export function AdminUsers() {
                         defaultValue={row.last_name ?? ""}
                         placeholder="(sem sobrenome)"
                         aria-label={`Sobrenome de ${row.full_name}`}
+                        disabled={!isAdmin}
                         onBlur={(e) => {
                           const raw = e.target.value.trim();
                           const newValue = raw.length > 0 ? raw : null;
@@ -523,7 +619,7 @@ export function AdminUsers() {
                     <TableCell className="min-w-[180px]">
                       <Select
                         value={row.area ?? ""}
-                        disabled={isSelf || updateAreaMutation.isPending}
+                        disabled={!isAdmin || isSelf || updateAreaMutation.isPending}
                         onValueChange={(v) =>
                           updateAreaMutation.mutate({
                             userId: row.id,
@@ -549,6 +645,7 @@ export function AdminUsers() {
                         defaultValue={row.job_title ?? ""}
                         placeholder="(sem cargo)"
                         aria-label={`Cargo de ${row.full_name}`}
+                        disabled={!isAdmin}
                         onBlur={(e) => {
                           const raw = e.target.value.trim();
                           const newValue = raw.length > 0 ? raw : null;
@@ -568,7 +665,7 @@ export function AdminUsers() {
                     <TableCell className="min-w-[180px]">
                       <Select
                         value={row.role}
-                        disabled={isSelf || updateRoleMutation.isPending}
+                        disabled={!isAdmin || isSelf || updateRoleMutation.isPending}
                         onValueChange={(v) =>
                           updateRoleMutation.mutate({
                             userId: row.id,
@@ -594,7 +691,7 @@ export function AdminUsers() {
                         role="switch"
                         aria-checked={row.active}
                         aria-label={`Status de ${row.full_name}`}
-                        disabled={isSelf || updateActiveMutation.isPending}
+                        disabled={!isAdmin || isSelf || updateActiveMutation.isPending}
                         onClick={() =>
                           updateActiveMutation.mutate({
                             userId: row.id,
@@ -629,6 +726,175 @@ export function AdminUsers() {
           </Table>
         </div>
       )}
+
+      <Dialog
+        open={inviteOpen}
+        onOpenChange={(open) => {
+          setInviteOpen(open);
+          if (!open) reset();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Convidar usuário</DialogTitle>
+            <DialogDescription>
+              A pessoa receberá um e-mail para definir a própria senha.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            onSubmit={handleSubmit(onInvite)}
+            className="space-y-4"
+            noValidate
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-first_name">Nome</Label>
+              <Input
+                id="invite-first_name"
+                {...register("first_name")}
+                aria-invalid={!!errors.first_name}
+                className="min-h-[44px]"
+              />
+              {errors.first_name ? (
+                <p className="text-[12px] font-medium text-[var(--color-danger-text)] leading-relaxed">
+                  {errors.first_name.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-last_name">Sobrenome</Label>
+              <Input
+                id="invite-last_name"
+                {...register("last_name")}
+                aria-invalid={!!errors.last_name}
+                className="min-h-[44px]"
+              />
+              {errors.last_name ? (
+                <p className="text-[12px] font-medium text-[var(--color-danger-text)] leading-relaxed">
+                  {errors.last_name.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-email">E-mail</Label>
+              <Input
+                id="invite-email"
+                type="email"
+                autoComplete="off"
+                {...register("email")}
+                aria-invalid={!!errors.email}
+                className="min-h-[44px]"
+              />
+              {errors.email ? (
+                <p className="text-[12px] font-medium text-[var(--color-danger-text)] leading-relaxed">
+                  {errors.email.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-area">Área</Label>
+              <Controller
+                name="area"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v)}
+                  >
+                    <SelectTrigger
+                      id="invite-area"
+                      className="min-h-[44px]"
+                      aria-invalid={!!errors.area}
+                    >
+                      <SelectValue placeholder="Selecione a área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS.map((a) => (
+                        <SelectItem key={a} value={a}>
+                          {a}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.area ? (
+                <p className="text-[12px] font-medium text-[var(--color-danger-text)] leading-relaxed">
+                  {errors.area.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-job_title">Cargo (opcional)</Label>
+              <Input
+                id="invite-job_title"
+                {...register("job_title")}
+                className="min-h-[44px]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="invite-role">Papel</Label>
+              <Controller
+                name="role"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ?? ""}
+                    onValueChange={(v) => field.onChange(v)}
+                  >
+                    <SelectTrigger
+                      id="invite-role"
+                      className="min-h-[44px]"
+                      aria-invalid={!!errors.role}
+                    >
+                      <SelectValue placeholder="Selecione o papel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {invitableRoles.map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {roleLabel(r)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.role ? (
+                <p className="text-[12px] font-medium text-[var(--color-danger-text)] leading-relaxed">
+                  {errors.role.message}
+                </p>
+              ) : null}
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setInviteOpen(false);
+                  reset();
+                }}
+                className="min-h-[44px]"
+                disabled={inviting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                className="min-h-[44px]"
+                disabled={inviting}
+              >
+                {inviting ? "Enviando…" : "Enviar convite"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
