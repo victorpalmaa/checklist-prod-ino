@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Camera, Trash2, ImageOff } from "lucide-react";
+import { ImagePlus, Trash2, ImageOff } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,6 +112,7 @@ export function AttachmentsPanel({
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [sectionKey, setSectionKey] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
 
   const sections = [...snapshot.sections].sort(
     (a, b) => a.sort_order - b.sort_order,
@@ -129,21 +130,52 @@ export function AttachmentsPanel({
     queryClient.invalidateQueries({ queryKey: ["run-attachments", runId] });
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: async (files: File[]) => {
       if (!currentUserId) throw new Error("Sessão não identificada.");
       if (!sectionKey) throw new Error("Escolha a etapa antes de anexar.");
-      return uploadAttachment({
-        runId,
-        sectionKey,
-        file,
-        uploadedBy: currentUserId,
-      });
+      let successCount = 0;
+      let failCount = 0;
+      let firstError: unknown = null;
+      setUploadProgress({ done: 0, total: files.length });
+      for (const file of files) {
+        try {
+          await uploadAttachment({
+            runId,
+            sectionKey,
+            file,
+            uploadedBy: currentUserId,
+          });
+          successCount++;
+        } catch (err) {
+          failCount++;
+          if (!firstError) firstError = err;
+        } finally {
+          setUploadProgress((prev) =>
+            prev ? { done: prev.done + 1, total: prev.total } : prev,
+          );
+        }
+      }
+      return { successCount, failCount, firstError };
     },
-    onSuccess: () => {
+    onSuccess: ({ successCount, failCount, firstError }) => {
       invalidate();
-      toast.success("Foto anexada.");
+      setUploadProgress(null);
+      if (failCount === 0) {
+        toast.success(
+          successCount === 1 ? "1 foto anexada." : `${successCount} fotos anexadas.`,
+        );
+      } else if (successCount === 0) {
+        toast.error(mapSupabaseError(firstError));
+      } else {
+        toast.warning(
+          `${successCount} de ${successCount + failCount} fotos anexadas. ${failCount === 1 ? "1 falhou" : `${failCount} falharam`}.`,
+        );
+      }
     },
-    onError: (err) => toast.error(mapSupabaseError(err)),
+    onError: (err) => {
+      setUploadProgress(null);
+      toast.error(mapSupabaseError(err));
+    },
   });
 
   const deleteMutation = useMutation({
@@ -193,12 +225,12 @@ export function AttachmentsPanel({
             ref={fileRef}
             type="file"
             accept={ACCEPTED_MIME.join(",")}
-            capture="environment"
+            multiple
             className="hidden"
             onChange={(e) => {
-              const f = e.target.files?.[0];
+              const files = e.target.files ? Array.from(e.target.files) : [];
               e.target.value = "";
-              if (f) uploadMutation.mutate(f);
+              if (files.length > 0) uploadMutation.mutate(files);
             }}
           />
           <Button
@@ -206,8 +238,10 @@ export function AttachmentsPanel({
             disabled={!sectionKey || uploadMutation.isPending}
             className="min-h-[44px]"
           >
-            <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
-            {uploadMutation.isPending ? "Enviando…" : "Anexar foto"}
+            <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
+            {uploadMutation.isPending && uploadProgress
+              ? `Enviando ${Math.min(uploadProgress.done + 1, uploadProgress.total)} de ${uploadProgress.total}…`
+              : "Anexar fotos"}
           </Button>
         </div>
       )}
