@@ -223,9 +223,9 @@ export function AppShell({ children, className }: AppShellProps) {
 
       <Sheet open={menuAberto} onOpenChange={setMenuAberto}>
         <SheetContent side="left" className="lg:hidden">
-          <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--color-primary-border)] px-4">
+          <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--color-primary-border)] pl-4 pr-14">
             <Logo variant="color" height={24} />
-            <SheetTitle className="whitespace-nowrap text-[13px] font-semibold text-[var(--color-fg)]">
+            <SheetTitle className="truncate min-w-0 text-[13px] font-semibold text-[var(--color-fg)]">
               Checklist de produção
             </SheetTitle>
           </div>
