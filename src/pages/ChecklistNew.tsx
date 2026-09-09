@@ -60,15 +60,19 @@ const createRunSchema = z.object({
     .string({ required_error: "Informe a data prevista de produção" })
     .min(1, "Informe a data prevista de produção")
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de data inválido"),
-  accompaniment_reason: z
-    .enum([
+  accompaniment_reason: z.enum(
+    [
       "Teste piloto",
       "Primeira produção",
       "Intercorrência de produção",
       "Alteração de fórmula",
       "Validação processo",
-    ])
-    .nullish(),
+    ],
+    {
+      required_error: "Informe o motivo do acompanhamento",
+      invalid_type_error: "Informe o motivo do acompanhamento",
+    },
+  ),
 });
 
 type CreateRunForm = z.infer<typeof createRunSchema>;
@@ -269,8 +273,9 @@ export function ChecklistNew() {
                 <SelectTrigger
                   id="accompaniment_reason"
                   aria-invalid={!!errors.accompaniment_reason}
+                  aria-describedby={errors.accompaniment_reason ? "accompaniment_reason-error" : undefined}
                 >
-                  <SelectValue placeholder="Selecione uma opção (opcional)" />
+                  <SelectValue placeholder="Selecione uma opção" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Teste piloto">Teste piloto</SelectItem>
@@ -282,6 +287,15 @@ export function ChecklistNew() {
               </Select>
             )}
           />
+          {errors.accompaniment_reason ? (
+            <p
+              id="accompaniment_reason-error"
+              className="text-xs"
+              style={{ color: "var(--color-danger-text)" }}
+            >
+              {errors.accompaniment_reason.message}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-2">
