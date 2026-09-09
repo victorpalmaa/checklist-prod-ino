@@ -122,7 +122,7 @@ export function ChecklistsList() {
       let builder = supabase
         .from("checklist_runs")
         .select(
-          "id, product_name, client, batch_number, production_date, status, created_at",
+          "id, product_name, client, batch_number, production_date, accompaniment_reason, status, created_at",
           { count: "exact" }
         )
         .order("created_at", { ascending: false });
@@ -268,8 +268,9 @@ export function ChecklistsList() {
               <TableRow>
                 <TableHead>Produto</TableHead>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Lote</TableHead>
+                <TableHead className="w-[100px] whitespace-nowrap">Lote</TableHead>
                 <TableHead>Produção</TableHead>
+                <TableHead>Motivo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Criado em</TableHead>
               </TableRow>
@@ -283,12 +284,24 @@ export function ChecklistsList() {
                 >
                   <TableCell className="font-medium">{run.product_name}</TableCell>
                   <TableCell>{run.client}</TableCell>
-                  <TableCell>{run.batch_number ?? "—"}</TableCell>
+                  <TableCell className="w-[100px] whitespace-nowrap">{run.batch_number ?? "—"}</TableCell>
                   <TableCell>{formatDatePtBr(run.production_date)}</TableCell>
+                  <TableCell>
+                    {run.accompaniment_reason ? (
+                      <span
+                        title={run.accompaniment_reason}
+                        className="inline-flex max-w-[200px] items-center truncate rounded-[var(--radius-sm)] border border-[var(--color-primary-border)] bg-[var(--color-primary-tint)] px-2 py-0.5 text-[12px] font-medium text-[var(--color-primary-text)]"
+                      >
+                        {run.accompaniment_reason}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--color-fg-secondary)]">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <RunStatusBadge status={run.status} />
                   </TableCell>
-                  <TableCell className="text-[var(--color-fg-secondary)]">
+                  <TableCell className="whitespace-nowrap text-[var(--color-fg-secondary)]">
                     {formatDateTimePtBr(run.created_at)}
                   </TableCell>
                 </TableRow>
