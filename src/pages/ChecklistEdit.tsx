@@ -26,6 +26,7 @@ import {
 } from "@/components/form/dynamic-form-meta";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
+import { formatRevision } from "@/lib/revision";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   parseSnapshot,
@@ -321,7 +322,7 @@ export function ChecklistEdit() {
           </h1>
           <p className="text-caption text-[var(--color-fg-secondary)]">
             {run.client} · Formulação {run.formulation_code} ·{" "}
-            {snapshot.document_code} Rev. {snapshot.revision}
+            {snapshot.document_code} {formatRevision(snapshot.revision)}
           </p>
           <AutosaveIndicator
             initial={initial}

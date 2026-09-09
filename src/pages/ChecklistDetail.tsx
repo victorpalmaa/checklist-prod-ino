@@ -32,6 +32,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
+import { formatRevision } from "@/lib/revision";
 import { parseSnapshot, type RunStatus } from "@/types/form";
 import type { Tables } from "@/types/database";
 
@@ -404,7 +405,7 @@ export function ChecklistDetail() {
           <h1 className="text-display">{run.product_name}</h1>
           <p className="text-caption text-[var(--color-fg-secondary)]">
             {run.client} · Formulação {run.formulation_code} ·{" "}
-            {snapshot.document_code} Rev. {snapshot.revision}
+            {snapshot.document_code} {formatRevision(snapshot.revision)}
           </p>
           <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-3">
             <div className="flex flex-col gap-0.5">

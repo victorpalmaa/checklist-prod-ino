@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
+import { formatRevision } from "@/lib/revision";
 import type { Database } from "@/types/database";
 import { PRODUCT_TYPE_LABEL, TEMPLATE_STATUS_LABEL } from "@/lib/products";
 import type { TemplateStatus } from "@/lib/products";
@@ -108,12 +109,6 @@ function formatDatePtBr(iso: string | null): string {
     month: "2-digit",
     year: "numeric",
   });
-}
-
-function formatRevision(revision: string): string {
-  const r = revision.trim();
-  if (/^rev\.?\s/i.test(r)) return r;
-  return `REV. ${r}`;
 }
 
 export function AdminTemplateDetail() {

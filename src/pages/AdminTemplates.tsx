@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
+import { formatRevision } from "@/lib/revision";
 import type { Database } from "@/types/database";
 import {
   PRODUCT_TYPE_LABEL,
@@ -41,18 +42,6 @@ function formatDatePtBr(iso: string | null): string {
     month: "2-digit",
     year: "numeric",
   });
-}
-
-/**
- * Normaliza a exibição da revisão. Os seeds antigos de Pó e Gel
- * gravaram "06" sem prefixo; os novos usam "REV. 07". A linha antiga é
- * archived e o trigger de imutabilidade impede corrigir no banco, então
- * a normalização acontece só na exibição.
- */
-function formatRevision(revision: string): string {
-  const r = revision.trim();
-  if (/^rev\.?\s/i.test(r)) return r;
-  return `REV. ${r}`;
 }
 
 export function AdminTemplates() {
