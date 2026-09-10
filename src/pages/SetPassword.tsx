@@ -111,7 +111,7 @@ export function SetPassword() {
       <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-page)] px-4 py-10">
         <div className="w-full max-w-[400px] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-card)] p-8">
           <div className="mb-8 flex justify-center">
-            <Logo variant="color" height={32} />
+            <Logo variant="color" height={40} padding={8} />
           </div>
 
           <div className="mb-6 text-center">
@@ -137,7 +137,7 @@ export function SetPassword() {
     <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-page)] px-4 py-10">
       <div className="w-full max-w-[400px] rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-card)] p-8">
         <div className="mb-8 flex justify-center">
-          <Logo variant="color" height={32} />
+          <Logo variant="color" height={40} padding={8} />
         </div>
 
         <div className="mb-6 text-center">

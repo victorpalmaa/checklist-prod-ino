@@ -201,7 +201,7 @@ a:focus-visible {
   }
 }
 
-button,
+button:not([role="checkbox"]):not([role="radio"]),
 a[role="button"],
 input[type="checkbox"],
 input[type="radio"],

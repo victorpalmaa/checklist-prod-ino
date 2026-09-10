@@ -442,15 +442,15 @@ export function AdminUsers() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="space-y-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1 min-w-0">
           <h1 className="text-display">Usuários</h1>
           <p className="text-body text-[var(--color-fg-secondary)]">
             Gerencie contas e permissões de acesso ao sistema.
           </p>
         </div>
         {canInvite ? (
-          <Button onClick={() => setInviteOpen(true)} className="min-h-[44px]">
+          <Button onClick={() => setInviteOpen(true)} className="min-h-[44px] shrink-0">
             Convidar usuário
           </Button>
         ) : null}
@@ -518,7 +518,7 @@ export function AdminUsers() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome completo</TableHead>
+                <TableHead className="whitespace-nowrap">Nome completo</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Matrícula</TableHead>
                 <TableHead>Nome</TableHead>
@@ -536,7 +536,7 @@ export function AdminUsers() {
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-baseline gap-2 whitespace-nowrap">
                         <span className="text-[14px] font-medium text-[var(--color-fg)]">
                           {row.full_name}
                         </span>

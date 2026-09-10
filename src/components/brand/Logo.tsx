@@ -2,11 +2,14 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+const LOGO_ASPECT_RATIO = 563 / 287;
+
 type LogoVariant = "color" | "white" | "mono";
 
 interface LogoProps {
   variant?: LogoVariant;
   height?: number;
+  padding?: number;
   className?: string;
 }
 
@@ -19,12 +22,17 @@ const variantToSrc: Record<LogoVariant, string> = {
 export function Logo({
   variant = "color",
   height = 32,
+  padding,
   className,
 }: LogoProps) {
-  const padding = height * 0.25;
-  const totalHeight = height + padding * 2;
-  const totalWidth = height * 3 + padding * 2;
+  const pad = padding ?? 0;
+  const totalHeight = height + pad * 2;
+  const totalWidth = height * LOGO_ASPECT_RATIO + pad * 2;
   const src = variantToSrc[variant];
+
+  const fallbackPad = padding ?? height * 0.25;
+  const fallbackHeight = height + fallbackPad * 2;
+  const fallbackWidth = height * 3 + fallbackPad * 2;
 
   const [hasFile, setHasFile] = React.useState<boolean | null>(null);
 
@@ -50,7 +58,7 @@ export function Logo({
         style={{
           height: totalHeight,
           width: totalWidth,
-          padding: padding,
+          padding: pad,
         }}
         aria-label="Pronutrition"
       >
@@ -75,9 +83,9 @@ export function Logo({
         className
       )}
       style={{
-        height: totalHeight,
-        width: totalWidth,
-        padding: padding,
+        height: fallbackHeight,
+        width: fallbackWidth,
+        padding: fallbackPad,
         borderColor: "var(--color-border-strong)",
         backgroundColor: "var(--color-surface-subtle)",
       }}

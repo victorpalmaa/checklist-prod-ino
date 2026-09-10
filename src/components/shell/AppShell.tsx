@@ -108,7 +108,7 @@ function deriveInitials(fullName: string | null | undefined): string {
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-4">
         <div className="mb-3 px-2">
           <span className="text-eyebrow">Menu</span>
         </div>
@@ -212,8 +212,8 @@ export function AppShell({ children, className }: AppShellProps) {
         aria-label="Navegação principal"
       >
         <div className="flex h-16 shrink-0 items-center gap-2.5 px-4 border-b border-[var(--color-primary-border)]">
-          <Logo variant="color" height={24} />
-          <span className="whitespace-nowrap text-[13px] font-semibold text-[var(--color-fg)]">
+          <Logo variant="color" height={28} />
+          <span className="whitespace-nowrap text-[14px] font-semibold text-[var(--color-fg)]">
             Checklist de produção
           </span>
         </div>
@@ -223,8 +223,8 @@ export function AppShell({ children, className }: AppShellProps) {
 
       <Sheet open={menuAberto} onOpenChange={setMenuAberto}>
         <SheetContent side="left" className="lg:hidden">
-          <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[var(--color-primary-border)] pl-4 pr-14">
-            <Logo variant="color" height={24} />
+          <div className="flex h-16 shrink-0 items-center gap-2 border-b border-[var(--color-primary-border)] pl-4 pr-12">
+            <Logo variant="color" height={28} />
             <SheetTitle className="truncate min-w-0 text-[13px] font-semibold text-[var(--color-fg)]">
               Checklist de produção
             </SheetTitle>
