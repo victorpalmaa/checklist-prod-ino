@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import {
   Controller,
+  useWatch,
   type Control,
   type FieldValues,
   type Path,
@@ -21,6 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SnapshotField } from "@/types/form";
+import { computeAvg } from "@/lib/computedAvg";
+import {
+  isFieldVisible,
+  type SectionsData,
+} from "@/lib/form/visibility";
 
 interface FieldRendererProps<T extends FieldValues> {
   field: SnapshotField;
@@ -28,6 +35,7 @@ interface FieldRendererProps<T extends FieldValues> {
   control: Control<T>;
   disabled?: boolean;
   fullKey?: string;
+  fieldsByKey: Map<string, SnapshotField>;
 }
 
 function formFieldKey(sectionKey: string, fieldKey: string) {
@@ -46,10 +54,31 @@ export function FieldRenderer<T extends FieldValues>({
   control,
   disabled = false,
   fullKey,
+  fieldsByKey,
 }: FieldRendererProps<T>) {
   const key = (fullKey ?? formFieldKey(sectionKey, field.key)) as Path<T>;
   const id = `field-${sectionKey}-${field.key}`;
   const unit = field.unit?.trim() ? field.unit.trim() : null;
+
+  const rawSectionsData = useWatch({
+    control,
+    name: "sections" as Path<T>,
+    disabled: field.field_type !== "computed_avg",
+  }) as SectionsData | undefined;
+
+  const avgResult = useMemo(() => {
+    if (field.field_type !== "computed_avg") return null;
+    const sectionsData = rawSectionsData ?? ({} as SectionsData);
+    const sectionBucket = sectionsData[sectionKey] ?? {};
+    return computeAvg(
+      field.computed_from,
+      sectionKey,
+      sectionBucket,
+      fieldsByKey,
+      sectionsData,
+      isFieldVisible,
+    );
+  }, [field, sectionKey, fieldsByKey, rawSectionsData]);
 
   if (disabled && field.field_type !== "checkbox") {
     return (
@@ -332,6 +361,8 @@ export function FieldRenderer<T extends FieldValues>({
       );
     }
     case "computed_avg": {
+      const showPartialWarning =
+        avgResult && avgResult.filled > 0 && avgResult.filled < avgResult.total;
       return (
         <div className="flex flex-col gap-2">
           <Label htmlFor={id} className="text-sm font-medium text-[var(--color-fg)]">
@@ -382,6 +413,14 @@ export function FieldRenderer<T extends FieldValues>({
               </div>
             ) : null}
           </div>
+          {showPartialWarning && avgResult ? (
+            <p
+              className="text-xs"
+              style={{ color: "var(--color-danger-text)" }}
+            >
+              Média de {avgResult.filled} de {avgResult.total} testes
+            </p>
+          ) : null}
         </div>
       );
     }

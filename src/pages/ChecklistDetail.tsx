@@ -33,8 +33,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import { mapSupabaseError } from "@/lib/errors";
 import { formatRevision } from "@/lib/revision";
-import { parseSnapshot, type RunStatus } from "@/types/form";
+import {
+  extractFieldsByKey,
+  parseSnapshot,
+  type RunStatus,
+  type SnapshotField,
+} from "@/types/form";
 import type { Tables } from "@/types/database";
+import { computeAvg } from "@/lib/computedAvg";
+import {
+  isFieldVisible,
+  type SectionsData,
+} from "@/lib/form/visibility";
 
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -59,16 +69,40 @@ function formatDateTime(iso: string | null | undefined): string {
 }
 
 function displayValueFromField(
-  field: { field_type: string; unit?: string | null },
+  field: {
+    field_type: string;
+    unit?: string | null;
+    computed_from?: readonly string[] | null | undefined;
+  },
+  sectionKey: string,
+  sectionsData: SectionsData,
+  fieldsByKey: Map<string, SnapshotField>,
   rv: Tables<"run_values"> | undefined,
   colSpecial?: string | number | boolean | null,
 ): string {
-  if (field.field_type === "computed_avg") return "—";
   if (colSpecial !== undefined && colSpecial !== null) {
     if (typeof colSpecial === "boolean") return colSpecial ? "Sim" : "Não";
     const s = String(colSpecial);
     if (s.length === 0) return "—";
     return field.unit ? `${s} ${field.unit}` : s;
+  }
+  if (field.field_type === "computed_avg") {
+    const sectionBucket = sectionsData[sectionKey] ?? {};
+    const result = computeAvg(
+      field.computed_from,
+      sectionKey,
+      sectionBucket,
+      fieldsByKey,
+      sectionsData,
+      isFieldVisible,
+    );
+    if (result.filled === 0 || result.value === null) return "—";
+    const rounded = result.value;
+    const base = field.unit ? `${rounded} ${field.unit}` : String(rounded);
+    if (result.filled > 0 && result.filled < result.total) {
+      return `${base} (média de ${result.filled} de ${result.total})`;
+    }
+    return base;
   }
   if (!rv) return "—";
   if (field.field_type === "number") {
@@ -312,6 +346,33 @@ export function ChecklistDetail() {
     valuesByKey.set(`${rv.section_key}.${rv.field_key}`, rv);
   }
 
+  const { fieldsByKey: detailFieldsByKey } = extractFieldsByKey(snapshot);
+
+  const detailSectionsData: SectionsData = {};
+  for (const sec of snapshot.sections) {
+    const bucket: Record<
+      string,
+      string | number | boolean | null | undefined
+    > = {};
+    for (const f of sec.fields) {
+      const rv = valuesByKey.get(`${sec.key}.${f.key}`);
+      if (rv) {
+        if (f.field_type === "number" || f.field_type === "computed_avg") {
+          bucket[f.key] = rv.value_num ?? null;
+        } else if (f.field_type === "checkbox") {
+          bucket[f.key] = rv.value_bool ?? null;
+        } else if (f.field_type === "date") {
+          bucket[f.key] = rv.value_date ?? null;
+        } else {
+          bucket[f.key] = rv.value_text ?? null;
+        }
+      } else {
+        bucket[f.key] = null;
+      }
+    }
+    detailSectionsData[sec.key] = bucket;
+  }
+
   const sortedSections = [...snapshot.sections].sort(
     (a, b) => a.sort_order - b.sort_order,
   );
@@ -513,7 +574,14 @@ export function ChecklistDetail() {
                 if (field.key === "batch_number") specialVal = run.batch_number;
                 if (field.key === "production_date") specialVal = run.production_date;
                 const rv = valuesByKey.get(`${sec.key}.${field.key}`);
-                const value = displayValueFromField(field, rv, specialVal);
+                const value = displayValueFromField(
+                  field,
+                  sec.key,
+                  detailSectionsData,
+                  detailFieldsByKey,
+                  rv,
+                  specialVal,
+                );
                 return (
                   <div key={field.key} className="flex flex-col gap-1">
                     <span className="text-eyebrow">{field.label}</span>

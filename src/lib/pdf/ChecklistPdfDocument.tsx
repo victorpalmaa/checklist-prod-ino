@@ -16,6 +16,7 @@ import type { ResolvedAttachment } from "@/lib/attachments";
 import { SIGNATURE_ROLE_LABEL } from "@/components/signatures/signatureMeta";
 import type { SignatureRole } from "@/components/signatures/signatureMeta";
 import { isFieldVisible } from "@/lib/form/visibility";
+import { computeAvg } from "@/lib/computedAvg";
 
 const BRAND = {
   primary: "#6A4DBE",
@@ -395,28 +396,21 @@ function formatFieldValue(
   const bucket = sectionsData[sectionKey] ?? {};
 
   if (field.field_type === "computed_avg") {
-    const srcKeys = field.computed_from ?? [];
-    if (srcKeys.length === 0) return "—";
-    const nums: number[] = [];
-    for (const k of srcKeys) {
-      const srcField = fieldsByKey.get(k);
-      if (srcField && !isFieldVisible(srcField, sectionKey, sectionsData)) continue;
-      const raw = bucket[k];
-      if (typeof raw === "number" && !Number.isNaN(raw)) {
-        nums.push(raw);
-      } else if (
-        typeof raw === "string" &&
-        raw.length > 0 &&
-        !Number.isNaN(Number(raw))
-      ) {
-        nums.push(Number(raw));
-      }
+    const result = computeAvg(
+      field.computed_from,
+      sectionKey,
+      bucket,
+      fieldsByKey,
+      sectionsData,
+      isFieldVisible,
+    );
+    if (result.filled === 0 || result.value === null) return "—";
+    const rounded = result.value;
+    const base = field.unit ? `${rounded} ${field.unit}` : String(rounded);
+    if (result.filled > 0 && result.filled < result.total) {
+      return `${base} (média de ${result.filled} de ${result.total})`;
     }
-    if (nums.length === 0) return "—";
-    const sum = nums.reduce((acc, n) => acc + n, 0);
-    const avg = sum / nums.length;
-    const rounded = Math.round(avg * 10000) / 10000;
-    return field.unit ? `${rounded} ${field.unit}` : String(rounded);
+    return base;
   }
 
   const raw = bucket[field.key];

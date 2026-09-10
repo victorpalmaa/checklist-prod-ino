@@ -20,6 +20,7 @@ import {
   totalProgress,
 } from "@/components/form/section-progress";
 import { extractFieldsByKey } from "@/types/form";
+import { computeAvg } from "@/lib/computedAvg";
 import {
   SPECIAL_FIELD_KEYS,
   type SpecialFieldKey,
@@ -138,27 +139,15 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
         if (srcKeys.length === 0) continue;
         const sectionBucket = form.getValues(`sections.${section.key}`) ?? {};
         const { fieldsByKey: fb } = fieldsByKeyMap;
-        const nums: number[] = [];
-        for (const k of srcKeys) {
-          const srcField = fb.get(k);
-          if (srcField && !isFieldVisible(srcField, section.key, allSectionsData)) continue;
-          const raw = sectionBucket[k];
-          if (typeof raw === "number" && !Number.isNaN(raw)) {
-            nums.push(raw);
-          } else if (
-            typeof raw === "string" &&
-            raw.length > 0 &&
-            !Number.isNaN(Number(raw))
-          ) {
-            nums.push(Number(raw));
-          }
-        }
-        let next: number | null = null;
-        if (nums.length > 0) {
-          const sum = nums.reduce((acc, n) => acc + n, 0);
-          const avg = sum / nums.length;
-          next = Math.round(avg * 10000) / 10000;
-        }
+        const result = computeAvg(
+          srcKeys,
+          section.key,
+          sectionBucket,
+          fb,
+          allSectionsData,
+          isFieldVisible,
+        );
+        const next = result.value;
         const current = sectionBucket[field.key];
         if (current === next) continue;
         if (current === null && next === null) continue;
@@ -262,6 +251,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
                       fullKey={specialFieldKey(field.key as SpecialFieldKey)}
                       control={form.control as Control<RunFormValues>}
                       disabled={readOnly}
+                      fieldsByKey={fieldsByKeyMap.fieldsByKey}
                     />
                   );
                 }
@@ -279,6 +269,7 @@ export const DynamicForm = forwardRef<DynamicFormHandle, DynamicFormProps>(
                       fullKey={sectionFieldKey(section.key, field.key)}
                       control={form.control as Control<RunFormValues>}
                       disabled={readOnly}
+                      fieldsByKey={fieldsByKeyMap.fieldsByKey}
                     />
                   </div>
                 );
